@@ -1,0 +1,30 @@
+#  ignore PhpStorm project directory
+.idea/*
+
+#  ignore npm/node package directory - dependencies given in package.json
+node_modules/*
+
+#  ignore TypeScript build directory - can be reconstructed given tsconfig file
+lib/
+
+#  ignore user data files
+data/*
+
+#  ignore JSDoc documentation directory, which can be reconstructed at any
+#  time based on JSDoc comments in the source files
+doc/*
+
+#  ignore log files
+log/*
+
+#  ignore Git message files
+*-message.md
+*-msg.md
+*-message.txt
+*-msg.txt
+*-message.bk
+*-msg.bk
+
+#  ignore images
+*.png
+*.gif
