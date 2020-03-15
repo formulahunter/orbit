@@ -7,6 +7,7 @@
  *
  */
 /**
+ * Project summary
  * This project is intended to be equal parts game, simulation, and educational
  * tool. It will render simple spacecraft orbiting an Earth-like planet in 3D
  * graphics and allow automated or manual control of the craft. In operating the
@@ -16,6 +17,7 @@
  * interest in aeronautics and astronautics.
  */
 /**
+ * Project goals
  * This project is written in TypeScript and heavily based on object-oriented
  * programming principles. It is designed specifically with the following
  * goals (in order of priority):
@@ -40,11 +42,13 @@
  * [1] https://en.wikipedia.org/wiki/Orbital_mechanics
  */
 /**
+ * Graphics summary
  * The simulator will feature a graphic display based on the HTML5 <canvas>
  * element, with GUI components implementing using HTML DOM elements and real-
  * time 3D rendering performed using WebGL.
  */
 /**
+ * Development schedule
  * Development will begin with the underlying physics models. Geometric and
  * kinematic concepts will be formalized and implemented first. Kinetics will be
  * built on top of those, followed by more domain-specific topics
