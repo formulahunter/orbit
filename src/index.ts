@@ -65,7 +65,11 @@
  * rather will proceed simultaneously with the other two stages.
  */
 
-import OrbitGame from './OrbitGame';
+// import OrbitGame from './OrbitGame.js';
+import CoordinateSystem from './kinematics/CoordinateSystem.js';
 
 //@ts-ignore
-let game = new OrbitGame();
+// let game = new OrbitGame();
+
+let ecliptic = new CoordinateSystem('ecliptic');
+console.log(ecliptic.parent.toString());

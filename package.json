@@ -1,0 +1,5 @@
+{
+  "name": "orbit",
+  "type": "module",
+  "main": "lib/index.js"
+}
