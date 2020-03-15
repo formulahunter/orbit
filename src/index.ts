@@ -139,6 +139,7 @@
 import CoordinateSystem from './kinematics/CoordinateSystem.js';
 // @ts-ignore
 import Vector from './kinematics/Vector.js';
+import Angle from './kinematics/Angle.js';
 
 //@ts-ignore
 // let game = new OrbitGame();
@@ -151,8 +152,31 @@ let vec = new Vector(1, 2, 3, false);
 console.log(`{${vec.x}, ${vec.y}, ${vec.z}}`);
 
 let test: Vector[] = [
+    new Vector(0, 0, 0),
+    new Vector(0, 0, 0, true),
     new Vector(1, 2, 3),
     new Vector(1, 2, 3, true)
 ];
+console.log(
+    'test[0] theta (radians)', test[0].theta.r, '\n',
+    'test[0] theta (degrees)', test[0].theta.d, '\n',
+    'test[0] phi (radians)',   test[0].phi.r, '\n',
+    'test[0] phi (degrees)',   test[0].phi.r, '\n',
+    'test[1] theta (radians)', test[1].theta.r, '\n',
+    'test[1] theta (degrees)', test[1].theta.d, '\n',
+    'test[1] phi (radians)',   test[1].phi.r, '\n',
+    'test[1] phi (degrees)',   test[1].phi.r, '\n',
+    'test[2] theta (radians)', test[2].theta.r, '\n',
+    'test[2] theta (degrees)', test[2].theta.d, '\n',
+    'test[2] phi (radians)',   test[2].phi.r, '\n',
+    'test[2] phi (degrees)',   test[2].phi.r, '\n',
+    'test[3] theta (radians)', test[3].theta.r, '\n',
+    'test[3] theta (degrees)', test[3].theta.d, '\n',
+    'test[3] phi (radians)',   test[3].phi.r, '\n',
+    'test[3] phi (degrees)',   test[3].phi.r, '\n'
+);
 
-console.log(test[0].homogeneous, test[1].homogeneous);
+//  typescript doesn't support type coercion unless it is explicitly indicated
+//  just using 'as number' also throws a compiler error - it assumes the type
+//  assertion might be a mistake since Angle and number don't overlap
+console.log((new Angle(14)) as unknown as number + 5);

@@ -4,6 +4,7 @@
  * both a direction and magnitude (e.g. angular momentum). Component values are
  * calculated on demand, then cached for subsequent access.
  */
+import Angle from './Angle.js';
 
 class Vector {
 
@@ -13,11 +14,11 @@ class Vector {
 
     /** angle (in radians) from the positive x axis to the point's projection
      * onto the x-y (horizontal) plane, measured about the origin */
-    private _theta: number | null = null;
+    private _theta: Angle | null = null;
 
     /** angle (in radians) from the x-y (horizontal) plane point, measured about
      * the origin */
-    private _phi: number | null = null;
+    private _phi: Angle | null = null;
 
     /** the distance from the origin to the point (always positive) */
     private _r: number | null = null;
@@ -26,15 +27,33 @@ class Vector {
      * in terms of given components and coordinate system type */
     constructor();
     constructor(x: number, y: number, z: number, isSpherical?: false);
-    constructor(theta: number, phi: number, r: number, isSpherical: true);
-    constructor(c1: number = 0, c2: number = 0, c3: number = 0, isSpherical: boolean = false) {
+    constructor(theta: Angle | number, phi: Angle | number, r: number, isSpherical: true);
+    constructor(c1: number | Angle = 0, c2: number | Angle = 0, c3: number = 0, isSpherical: boolean = false) {
 
         if(isSpherical) {
+
+            if(typeof c1 === 'number') {
+                c1 = new Angle(c1);
+            }
+            if(typeof c2 === 'number') {
+                c2 = new Angle(c2);
+            }
+
             this.theta = c1;
             this.phi = c2;
             this.r = c3;
         }
         else {
+
+            if(c1 instanceof Angle) {
+                console.debug(`angle %o passed as cartesian component x to vector constructor`, c1);
+                throw new TypeError('invalid vector constructor argument');
+            }
+            if(c2 instanceof Angle) {
+                console.debug(`angle %o passed as cartesian component y to vector constructor`, c2);
+                throw new TypeError('invalid vector constructor argument');
+            }
+
             this.x = c1;
             this.y = c2;
             this.z = c3;
@@ -60,7 +79,7 @@ class Vector {
 
             //  x is the cosine component of theta with a hypotenuse equal to
             //  r * cos(phi)
-            this._x = this._r * Math.cos(this._phi) * Math.cos(this._theta);
+            this._x = this._r * Math.cos(this._phi.r) * Math.cos(this._theta.r);
         }
 
         return this._x;
@@ -97,7 +116,7 @@ class Vector {
 
             //  y is the sine component of theta with a hypotenuse equal to
             //  r * cos(phi)
-            this._y = this._r * Math.cos(this._phi) * Math.sin(this._theta);
+            this._y = this._r * Math.cos(this._phi.r) * Math.sin(this._theta.r);
         }
 
         return this._y;
@@ -133,7 +152,7 @@ class Vector {
             }
 
             //  z is the sine component of phi with a hypotenuse equal to r
-            this._z = this._r * Math.sin(this._phi);
+            this._z = this._r * Math.sin(this._phi.r);
         }
 
         return this._z;
@@ -155,7 +174,7 @@ class Vector {
 
     /** get the angle from the positive x axis to this point's image on the x-y
      * (horizontal) plane, as measured about the origin */
-    get theta() {
+    get theta(): Angle {
 
         if(this._theta === null) {
 
@@ -172,14 +191,14 @@ class Vector {
 
             //  theta is the angle from the +x axis to the point's image on the
             //  x-y (horizontal) plane
-            this._theta = Math.atan2(this._y, this._x);
+            this._theta = new Angle(Math.atan2(this._y, this._x));
         }
 
         return this._theta;
     }
     /** set the angle from the positive x axis to this point's image on the x-y
      * (horizontal) plane, as measured about the origin */
-    set theta(theta: number) {
+    set theta(theta: Angle) {
 
         this._theta = theta;
 
@@ -194,7 +213,7 @@ class Vector {
 
     /** get the angle from the x-y (horizontal) plane to this point, as measured
      *  about the origin */
-    get phi(): number {
+    get phi(): Angle {
 
         if(this._phi === null) {
 
@@ -211,14 +230,14 @@ class Vector {
 
             //  phi is the angle from the x-y (horizontal) plane to this point
             let lateral = Math.sqrt(Math.pow(this._x, 2) + Math.pow(this._y, 2));
-            this._phi = Math.atan2(this._z, lateral);
+            this._phi = new Angle(Math.atan2(this._z, lateral));
         }
 
         return this._phi;
     }
     /** set the angle from the x-y (horizontal) plane to this point, as measured
      *  about the origin */
-    set phi(phi: number) {
+    set phi(phi: Angle) {
 
         this._phi = phi;
 
