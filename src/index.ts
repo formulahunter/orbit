@@ -42,7 +42,12 @@
 /**
  * The simulator will feature a graphic display based on the HTML5 <canvas>
  * element, with GUI components implementing using HTML DOM elements and real-
- * time 3D rendering performed using WebGL.
+ * time 3D rendering performed using WebGL (possibly with the help of a
+ * library like three.js or similar).
+ *
+ * Offscreen canvas elements will be utilized to relieve the burden of
+ * rendering shapes that do not change/move from one frame to the next (assuming
+ * this strategy is compatible with the WebGL API).
  */
 /**
  * Development will begin with the underlying physics models. Geometric and
