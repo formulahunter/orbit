@@ -97,6 +97,43 @@
  * whose values will be cached in the same way after the first time they are
  * calculated).
  */
+/**
+ * Geometric calculations in 3 dimensions
+ *
+ * In 3D geometry, certain transformations (e.g. translations) cannot be
+ * concisely represented but instead require calculations involving multiple
+ * steps. These computations can be performed more efficiently with the use of
+ * homogeneous coordinates[1], which are very commonly used in computer graphics
+ * for that reason.
+ *
+ * Of note, the projective geometry that defines homogeneous coordinates also
+ * unifies (or "homogenizes") the the intuitively distinct definitions of points
+ * and lines so that, for example, the equation of a line passing through two
+ * points can be derived by matrix multiplication of the homogeneous coordinates
+ * of those two points. This property of projective geometry is referred to as
+ * point-line duality[2].
+ *
+ * The main application of homogeneous coordinates in computer graphics is the
+ * implementation of affine transformations[3]. This category of transformations
+ * includes the simpler linear transformations[4] (which by themselves can be
+ * defined in terms of matrix multiplication without the addition of an extra
+ * dimension), in addition to translation, an essential operation in 3D
+ * simulations. Because linear translations are a subset of affine
+ * transformations, they can also be defined by matrix multiplication when the
+ * additional dimension is present.
+ *
+ * Accommodations are made in geospatial classes for performing calculations in
+ * homogeneous coordinates, though these calculations are not yet implemented
+ * (at time of writing).
+ *
+ * [1] https://en.wikipedia.org/wiki/Homogeneous_coordinates
+ * [2] https://en.wikipedia.org/wiki/Duality_(projective_geometry)
+ * [3] https://en.wikipedia.org/wiki/Transformation_matrix#Affine_transformations
+ * [4] https://en.wikipedia.org/wiki/Linear_map
+ */
+/**
+ * TODO - check for reasonable length of Vector component strings
+ */
 
 // import OrbitGame from './OrbitGame.js';
 import CoordinateSystem from './kinematics/CoordinateSystem.js';
@@ -114,23 +151,8 @@ let vec = new Vector(1, 2, 3, false);
 console.log(`{${vec.x}, ${vec.y}, ${vec.z}}`);
 
 let test: Vector[] = [
-    new Vector(0, 0, 0, false),
-    new Vector(0, 0, 0, true),
     new Vector(1, 2, 3),
-    new Vector(1, 2, 3, false),
     new Vector(1, 2, 3, true)
 ];
 
-console.log(
-    'test 0 cartesian: ', test[0].cartesianString, '\n',
-    'test 0 spherical: ', test[0].sphericalString, '\n',
-    'test 1 cartesian: ', test[1].cartesianString, '\n',
-    'test 1 spherical: ', test[1].sphericalString, '\n',
-    'test 2 cartesian: ', test[2].cartesianString, '\n',
-    'test 2 spherical: ', test[2].sphericalString, '\n',
-    'test 3 cartesian: ', test[3].cartesianString, '\n',
-    'test 3 spherical: ', test[3].sphericalString, '\n',
-    'test 4 cartesian: ', test[4].cartesianString, '\n',
-    'test 4 spherical: ', test[4].sphericalString, '\n'
-);
-console.log(180*test[2].theta/Math.PI, 180*test[2].phi/Math.PI);
+console.log(test[0].homogeneous, test[1].homogeneous);

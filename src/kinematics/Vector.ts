@@ -269,6 +269,15 @@ class Vector {
         // this._hom = null;
     }
 
+    /** get this vector's Cartesian components in homogeneous coordinates for
+     * use in calculations
+     *
+     * if needed, this result could be cached for performance relief
+     */
+    get homogeneous(): number[] {
+        return [this.x, this.y, this.z, 1];
+    }
+
     /** get a string representing this instance's "class" and Cartesian
      *  component values */
     toString() {
@@ -283,9 +292,10 @@ class Vector {
         return `{${this.theta}, ${this.phi}, ${this.r}}`;
     }
 
-    /** get this instance's raw value as an array of Cartesian coordinates */
+    /** get this instance's raw value as an array of homogeneous coordinates
+     * (potentially useful for using in calculations) */
     valueOf() {
-        return [this.x, this.y, this.z];
+        return [this.x, this.y, this.z, 1];
     }
 }
 
