@@ -64,3 +64,8 @@
  * abound. This won't so much be a separate phase of the development process but
  * rather will proceed simultaneously with the other two stages.
  */
+
+import OrbitGame from './OrbitGame';
+
+//@ts-ignore
+let game = new OrbitGame();
