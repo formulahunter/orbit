@@ -133,50 +133,35 @@
  */
 /**
  * TODO - check for reasonable length of Vector component strings
+ *
+ * NASA - analysis of propellant tank masses
+ * - includes tables of dry/propellant/engine masses for dozens of rockets
+ * - https://www.nasa.gov/pdf/382034main_018%20-%2020090706.05.Analysis_of_Propellant_Tank_Masses.pdf
+ *
+ * sciencelearn.org - calculating rocket acceleration
+ * - parameters of Space Shuttle launch profile: @t=0 a=5.25m/s2, @t=124s
+ *   H=45km v=1380m/s, @t=~480 H=300km v=28000km/h
+ * - https://www.sciencelearn.org.nz/resources/397-calculating-rocket-acceleration
+ *
+ * Wikipedia - Falcon 9 Full Thrust
+ * - lots of data on the Falcon 9 Blocks 1 - 5
+ * - https://en.wikipedia.org/wiki/Falcon_9_Full_Thrust
  */
 
-// import OrbitGame from './OrbitGame.js';
-import CoordinateSystem from './kinematics/CoordinateSystem.js';
+import OrbitGame from './OrbitGame.js';
+import Spacecraft from './Spacecraft.js';
+// import CoordinateSystem from './kinematics/CoordinateSystem.js';
 // @ts-ignore
-import Vector from './kinematics/Vector.js';
-import Angle from './kinematics/Angle.js';
+// import Vector from './kinematics/Vector.js';
+// import Angle from './kinematics/Angle.js';
 
 //@ts-ignore
-// let game = new OrbitGame();
+let game = new OrbitGame();
+let craftCount: number = game.addCraft(new Spacecraft('Explorer 1'));
+console.log(`${craftCount} spacecraft`);
+let explorer1: Spacecraft = game.getCraft(0);
+console.log(explorer1);
+console.log(explorer1 === game.removeCraft(0));
+game.addCraft(explorer1);
+console.log(game.removeCraft(explorer1));
 
-let ecliptic = new CoordinateSystem('ecliptic');
-console.log(ecliptic.parent.toString());
-
-//@ts-ignore
-let vec = new Vector(1, 2, 3, false);
-console.log(`{${vec.x}, ${vec.y}, ${vec.z}}`);
-
-let test: Vector[] = [
-    new Vector(0, 0, 0),
-    new Vector(0, 0, 0, true),
-    new Vector(1, 2, 3),
-    new Vector(1, 2, 3, true)
-];
-console.log(
-    'test[0] theta (radians)', test[0].theta.r, '\n',
-    'test[0] theta (degrees)', test[0].theta.d, '\n',
-    'test[0] phi (radians)',   test[0].phi.r, '\n',
-    'test[0] phi (degrees)',   test[0].phi.r, '\n',
-    'test[1] theta (radians)', test[1].theta.r, '\n',
-    'test[1] theta (degrees)', test[1].theta.d, '\n',
-    'test[1] phi (radians)',   test[1].phi.r, '\n',
-    'test[1] phi (degrees)',   test[1].phi.r, '\n',
-    'test[2] theta (radians)', test[2].theta.r, '\n',
-    'test[2] theta (degrees)', test[2].theta.d, '\n',
-    'test[2] phi (radians)',   test[2].phi.r, '\n',
-    'test[2] phi (degrees)',   test[2].phi.r, '\n',
-    'test[3] theta (radians)', test[3].theta.r, '\n',
-    'test[3] theta (degrees)', test[3].theta.d, '\n',
-    'test[3] phi (radians)',   test[3].phi.r, '\n',
-    'test[3] phi (degrees)',   test[3].phi.r, '\n'
-);
-
-//  typescript doesn't support type coercion unless it is explicitly indicated
-//  just using 'as number' also throws a compiler error - it assumes the type
-//  assertion might be a mistake since Angle and number don't overlap
-console.log((new Angle(14)) as unknown as number + 5);
