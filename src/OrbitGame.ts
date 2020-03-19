@@ -9,6 +9,9 @@ type ShaderProgramInfo = {
         [uni: string]: WebGLUniformLocation | null
     }
 };
+type BufferIndex = {
+    position: WebGLBuffer
+};
 
 //  define the vertex & fragment shaders by their source code
 const vsSource = `
@@ -95,6 +98,15 @@ class OrbitGame {
             }
         };
 
+        //  initialize the position buffer with the square's vertex coordinates
+        try {
+            this.initBuffer();
+        }
+        catch(er) {
+            console.error(`error initializing buffers: ${er.toString()}`);
+            return -1;
+        }
+
         return 0;
     }
 
@@ -164,6 +176,46 @@ class OrbitGame {
         }
 
         return shader;
+    }
+
+    /** initialize and return a buffer for the square's vertices
+     * @throws TypeError - wgl.createBuffer returned an invalid buffer */
+    initBuffer(): BufferIndex {
+
+        //  create a buffer to store the square's vertex positions
+        let positionBuffer: WebGLBuffer | null = this.wgl.createBuffer();
+        if(!(positionBuffer instanceof WebGLBuffer)) {
+            console.debug('invalid buffer returned from wgl.createBuffer():' +
+                ' %o', positionBuffer);
+            throw new TypeError(`invalid position buffer`);
+        }
+
+        //  this designates 'positionBuffer' as the one to which buffer ops
+        //  should be applied
+        this.wgl.bindBuffer(this.wgl.ARRAY_BUFFER, positionBuffer);
+
+        //  create an array of coordinates for the square
+        let positions: number[] = [
+            -1.0,  1.0,
+            1.0,  1.0,
+            -1.0, -1.0,
+            1.0, -1.0,
+        ];
+
+        //  fill the array buffer with a typed array derived from the positions
+        //  array previously defined
+        //  indicate that this data will be used unchanged for "many" draw
+        //  cycles/commands
+        //
+        //  note the exceptions that may be thrown: wgl.OUT_OF_MEMORY,
+        //  wgl.INVALID_VALUE, & wgl.INVALID_ENUM
+        //  see https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bufferData
+        this.wgl.bufferData(this.wgl.ARRAY_BUFFER, Int32Array.from(positions),
+                            this.wgl.STATIC_DRAW);
+
+        return {
+            position: positionBuffer
+        };
     }
 }
 
