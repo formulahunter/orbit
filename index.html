@@ -9,6 +9,19 @@
 </head>
 <body>
 
+    <!--
+        GUI layout notes
+
+        as of now the intent is to use (at least some) HTML elements for the GUI
+        (rendering text in the canvas is known to be slow and may prove
+        challenging to combine with WebGL rendering anyway).
+
+        if this remains true, consider nesting GUI components and the <canvas>
+        element in two separate <div>s and overlay them so that GUI elements are
+        positioned on top of the canvas. pay particular attention to how this
+        will work across devices. CSS styling will have to be on point to make
+        sure they always align properly.
+    -->
     <canvas id="viewport"></canvas>
 
 </body>
