@@ -80,10 +80,6 @@ class OrbitGame {
      */
     init(): number {
 
-        //  set the clear color and clear the canvas
-        this.wgl.clearColor(0, 0, 0, 1);
-        this.wgl.clear(this.wgl.COLOR_BUFFER_BIT);
-
         //  compile and link a shader program from vertex & fragment shader
         //  sources
         let shader: WebGLProgram;
@@ -247,7 +243,7 @@ class OrbitGame {
 
         //  verify successful links
         if(!this.wgl.getProgramParameter(program, this.wgl.LINK_STATUS)) {
-            alert('Unable to initialize the shader program: ' + this.wgl.getProgramInfoLog(program));
+            console.debug('shader program info log dump: ' + this.wgl.getProgramInfoLog(program));
             throw new TypeError('error linking the shader program');
         }
 
