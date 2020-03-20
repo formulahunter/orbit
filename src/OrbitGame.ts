@@ -160,7 +160,7 @@ class OrbitGame {
         const modelViewMatrix: mat4 = mat4.create();
         mat4.translate(modelViewMatrix,     //  destination matrix
                         modelViewMatrix,    //  source matrix
-                        [-0.0, 0.0, 6.0]);  //  amount to translate
+                        [-0.0, 0.0, -6.0]);  //  amount to translate
 
         //  describe exactly what the values entered into the array buffer are
         //  (i.e. each "position" defined in initBuffer() is a pair of
