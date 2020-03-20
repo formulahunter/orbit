@@ -315,7 +315,8 @@ class OrbitGame {
         //  note the exceptions that may be thrown: wgl.OUT_OF_MEMORY,
         //  wgl.INVALID_VALUE, & wgl.INVALID_ENUM
         //  see https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bufferData
-        this.wgl.bufferData(this.wgl.ARRAY_BUFFER, Int32Array.from(positions),
+        this.wgl.bufferData(this.wgl.ARRAY_BUFFER,
+                            Float32Array.from(positions),
                             this.wgl.STATIC_DRAW);
 
         return {
