@@ -27,4 +27,9 @@ log/*
 
 #  ignore images
 *.png
+*.jpg
 *.gif
+*.tif
+
+#  ignore PDFs
+*.pdf
