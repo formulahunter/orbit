@@ -12,24 +12,30 @@ type ShaderProgramInfo = {
     }
 };
 type BufferIndex = {
-    position: WebGLBuffer
+    [buf: string]: WebGLBuffer
 };
 
 /** vertex shader source code */
 const vsSource = `
     attribute vec4 aVertexPosition;
+    attribute vec4 aVertexColor;
 
     uniform mat4 uModelViewMatrix;
     uniform mat4 uProjectionMatrix;
+    
+    varying lowp vec4 vColor;
 
     void main() {
       gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+      vColor = aVertexColor;
     }
   `;
 /** fragment shader source code */
 const fsSource = `
+    varying lowp vec4 vColor;
+    
     void main() {
-      gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+      gl_FragColor = vColor;
     }
   `;
 
@@ -96,7 +102,8 @@ class OrbitGame {
         const programInfo: ShaderProgramInfo = {
             program: shader,
             attributes: {
-                vertexPosition: this.wgl.getAttribLocation(shader, 'aVertexPosition')
+                vertexPosition: this.wgl.getAttribLocation(shader, 'aVertexPosition'),
+                vertexColor: this.wgl.getAttribLocation(shader, 'aVertexColor')
             },
             uniforms: {
                 projectionMatrix: this.wgl.getUniformLocation(shader, 'uProjectionMatrix'),
@@ -111,9 +118,9 @@ class OrbitGame {
         }
 
         //  initialize the position buffer with the square's vertex coordinates
-        let positionBuffer: BufferIndex;
+        let buffers: BufferIndex;
         try {
-            positionBuffer = this.initBuffer();
+            buffers = this.initBuffers();
         }
         catch(er) {
             console.error(`error initializing buffers: ${er.toString()}`);
@@ -121,7 +128,7 @@ class OrbitGame {
         }
 
         //  draw the scene
-        this.drawScene(programInfo, positionBuffer);
+        this.drawScene(programInfo, buffers);
 
         return 0;
     }
@@ -164,8 +171,8 @@ class OrbitGame {
                         modelViewMatrix,    //  source matrix
                         [-0.0, 0.0, -6.0]);  //  amount to translate
 
-        //  describe exactly what the values entered into the array buffer are
-        //  (i.e. each "position" defined in initBuffer() is a pair of
+        //  describe exactly what the values entered into the position buffer
+        //  are (i.e. each "position" defined in initBuffers() is a pair of
         //  32-bit floats)
         //  tell wgl to pull those values out of the array buffer into the
         //  vertexPosition attribute in the vertex shader source (no attributes
@@ -175,7 +182,7 @@ class OrbitGame {
         //  note the use of curly braces to create an isolated variable scope
         {
             const numComponents: number = 2;        // pull out 2 values per iteration
-            const type: number = this.wgl.FLOAT;    // the coordinates are 32bit floats
+            const type: GLenum = this.wgl.FLOAT;    // the coordinates are 32bit floats
             const normalize: boolean = false;       // don't normalize
             const stride: number = 0;               // how many bytes to get from one set of values to the next
                                                     // 0 => use type and numComponents above
@@ -190,6 +197,26 @@ class OrbitGame {
                 offset);
             this.wgl.enableVertexAttribArray(
                 programInfo.attributes.vertexPosition);
+        }
+
+        //  tell wegl how to pull color attributes from the color array buffer
+        {
+            const numComponents: number = 4;        //  4 values each (rgba)
+            const type: GLenum = this.wgl.FLOAT;
+            const normalize: boolean = false;
+            const stride: number = 0;
+            const offset: number = 0;
+            this.wgl.bindBuffer(this.wgl.ARRAY_BUFFER, buffers.color);
+            this.wgl.vertexAttribPointer(
+                programInfo.attributes.vertexColor,
+                numComponents,
+                type,
+                normalize,
+                stride,
+                offset
+            );
+            this.wgl.enableVertexAttribArray(
+                programInfo.attributes.vertexColor);
         }
 
         //  designate the program to use when drawing
@@ -287,10 +314,10 @@ class OrbitGame {
 
     /** initialize and return a buffer for the square's vertices
      * @throws TypeError - wgl.createBuffer returned an invalid buffer */
-    initBuffer(): BufferIndex {
+    initBuffers(): BufferIndex {
 
         //  create a buffer to store the square's vertex positions
-        let positionBuffer: WebGLBuffer | null = this.wgl.createBuffer();
+        const positionBuffer: WebGLBuffer | null = this.wgl.createBuffer();
         if(!(positionBuffer instanceof WebGLBuffer)) {
             console.debug('invalid buffer returned from wgl.createBuffer():' +
                 ' %o', positionBuffer);
@@ -302,7 +329,7 @@ class OrbitGame {
         this.wgl.bindBuffer(this.wgl.ARRAY_BUFFER, positionBuffer);
 
         //  create an array of coordinates for the square
-        let positions: number[] = [
+        const positions: number[] = [
             -1.0,  1.0,
             1.0,  1.0,
             -1.0, -1.0,
@@ -321,8 +348,29 @@ class OrbitGame {
                             Float32Array.from(positions),
                             this.wgl.STATIC_DRAW);
 
+        //  define 4 rgba colors (one for each vertex of the square)
+        const colors: number[] = [
+            1.0, 1.0, 1.0, 1.0,     //  white
+            1.0, 0.0, 0.0, 1.0,     //  red
+            0.0, 1.0, 0.0, 1.0,     //  green
+            0.0, 0.0, 1.0, 1.0      //  blue
+        ];
+
+        //
+        const colorBuffer: WebGLBuffer | null = this.wgl.createBuffer();
+        if(!(colorBuffer instanceof WebGLBuffer)) {
+            console.debug('invalid buffer returned from wgl.createBuffer():' +
+                ' %o', colorBuffer);
+            throw new TypeError(`invalid color buffer`);
+        }
+        this.wgl.bindBuffer(this.wgl.ARRAY_BUFFER, colorBuffer);
+        this.wgl.bufferData(this.wgl.ARRAY_BUFFER,
+                            Float32Array.from(colors),
+                            this.wgl.STATIC_DRAW);
+
         return {
-            position: positionBuffer
+            position: positionBuffer,
+            color: colorBuffer
         };
     }
 }
