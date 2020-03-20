@@ -1,3 +1,5 @@
+//@ts-ignore
+import {mat4} from '../ext/gl-matrix/index.js';
 
 
 type ShaderProgramInfo = {
@@ -13,22 +15,23 @@ type BufferIndex = {
     position: WebGLBuffer
 };
 
-//  define the vertex & fragment shaders by their source code
+/** vertex shader source code */
 const vsSource = `
-            attribute vec4 aVertexPosition;
-        
-            uniform mat4 uModelViewMatrix;
-            uniform mat4 uProjectionMatrix;
-        
-            void main() {
-                gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-            }
-        `;
+    attribute vec4 aVertexPosition;
+
+    uniform mat4 uModelViewMatrix;
+    uniform mat4 uProjectionMatrix;
+
+    void main() {
+      gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+    }
+  `;
+/** fragment shader source code */
 const fsSource = `
-            void main() {
-                gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-            }
-        `;
+    void main() {
+      gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+    }
+  `;
 
 class OrbitGame {
 
@@ -97,19 +100,121 @@ class OrbitGame {
                 modelViewMatrix: this.wgl.getUniformLocation(shader, 'uModelViewMatrix')
             }
         };
+        if(!(programInfo.uniforms.projectionMatrix instanceof WebGLUniformLocation)
+            || !(programInfo.uniforms.modelViewMatrix instanceof WebGLUniformLocation)) {
+            console.debug('invalid uniform location reported from shader' +
+                ' program: %o', programInfo.uniforms);
+            throw new TypeError('invalid shader program uniform location');
+        }
 
         //  initialize the position buffer with the square's vertex coordinates
+        let positionBuffer: BufferIndex;
         try {
-            this.initBuffer();
+            positionBuffer = this.initBuffer();
         }
         catch(er) {
             console.error(`error initializing buffers: ${er.toString()}`);
             return -1;
         }
 
+        //  draw the scene
+        this.drawScene(programInfo, positionBuffer);
+
         return 0;
     }
 
+
+    /** draw the scene's current state */
+    drawScene(programInfo: ShaderProgramInfo, buffers: BufferIndex): void {
+
+        //  set the clear color (opaque black) and depth (100%)
+        //  configure relations of objects at different depths (?)
+        this.wgl.clearColor(0.0, 0.0, 0.0, 1.0);  // Clear to black, fully opaque
+        this.wgl.clearDepth(1.0);                 // Clear everything
+        this.wgl.enable(this.wgl.DEPTH_TEST);     // Enable depth testing
+        this.wgl.depthFunc(this.wgl.LEQUAL);      // Near things obscure far things
+
+        //  clear the canvas before drawing on it
+        //  same as with CanvasRenderingContext2D
+        this.wgl.clear(this.wgl.COLOR_BUFFER_BIT | this.wgl.DEPTH_BUFFER_BIT);
+
+        //  define the field of view, aspect ratio, and near and far z-bounds
+        //  these parameters will be used to calculate elements in a 4x4
+        //  projection matrix
+        let fov: number = 45 * Math.PI / 180;   // in radians
+        //  TypeScript complaining that clientWidth & clientHeight are not
+        //  properties of type OffscreenCanvas
+        //@ts-ignore
+        let aspect: number = this.wgl.canvas.clientWidth / this.wgl.canvas.clientHeight;
+        let zNear: number = 0.1;
+        let zFar: number = 100.0;
+
+        //  create a perspective matrix and calculate its elements
+        const projectionMatrix: mat4 = mat4.create();
+        mat4.perspective(projectionMatrix, fov, aspect, zNear, zFar);
+
+        //  create a matrix where the square should be drawn and offset it
+        //  slightly from the origin (mat4.create() returns a new 4x4 identity
+        //  matrix)
+        //  not sure why MDN shows explicit floats or the negative zero?
+        const modelViewMatrix: mat4 = mat4.create();
+        mat4.translate(modelViewMatrix,     //  destination matrix
+                        modelViewMatrix,    //  source matrix
+                        [-0.0, 0.0, 6.0]);  //  amount to translate
+
+        //  describe exactly what the values entered into the array buffer are
+        //  (i.e. each "position" defined in initBuffer() is a pair of
+        //  32-bit floats)
+        //  tell wgl to pull those values out of the array buffer into the
+        //  vertexPosition attribute in the vertex shader source (no attributes
+        //  declared in the fragment shader but they would be indicated the same
+        //  way here)
+        //
+        //  note the use of curly braces to create an isolated variable scope
+        {
+            const numComponents: number = 2;        // pull out 2 values per iteration
+            const type: number = this.wgl.FLOAT;    // the coordinates are 32bit floats
+            const normalize: boolean = false;       // don't normalize
+            const stride: number = 0;               // how many bytes to get from one set of values to the next
+                                                    // 0 => use type and numComponents above
+            const offset: number = 0;               // how many bytes inside the buffer to start from
+            this.wgl.bindBuffer(this.wgl.ARRAY_BUFFER, buffers.position);
+            this.wgl.vertexAttribPointer(
+                programInfo.attributes.vertexPosition,
+                numComponents,
+                type,
+                normalize,
+                stride,
+                offset);
+            this.wgl.enableVertexAttribArray(
+                programInfo.attributes.vertexPosition);
+        }
+
+        //  designate the program to use when drawing
+        this.wgl.useProgram(programInfo.program);
+
+        //  designate shader uniforms declared in the vertex shader (no uniforms
+        //  declared in the fragment shader but they would be indicated the same
+        //  way here)
+        this.wgl.uniformMatrix4fv(
+            programInfo.uniforms.projectionMatrix,
+            false,
+            projectionMatrix
+        );
+        this.wgl.uniformMatrix4fv(
+            programInfo.uniforms.modelViewMatrix,
+            false,
+            modelViewMatrix
+        );
+
+        //  actually draw the square
+        //  again note the use of curly braces
+        {
+            const offset: number = 0;
+            const vertexCount: number = 4;
+            this.wgl.drawArrays(this.wgl.TRIANGLE_STRIP, offset, vertexCount);
+        }
+    }
 
     /** helper method to automate compiling/linking a shader program
      * @throws TypeError - likely due to a failed compilation/link; refer to
