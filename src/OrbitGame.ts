@@ -35,7 +35,11 @@ const fsSource = `
 
 class OrbitGame {
 
+    /** canvas element */
     private canvas: HTMLCanvasElement;
+
+    /** viewport size (canvas element's clientHeight and clientWidth) */
+    private vpSize: [number, number] = [-1, -1];
 
     /** WebGL rendering context
      * Consider possible benefits of using a WebGL2RenderingContext if/when
@@ -51,6 +55,9 @@ class OrbitGame {
             throw new TypeError('error retrieving viewport <canvas> element');
         }
         this.canvas = canvas;
+        this.vpSize = [canvas.clientWidth, canvas.clientHeight];
+        canvas.width = this.vpSize[0];
+        canvas.height = this.vpSize[1];
 
         let ctx: WebGLRenderingContext | null = this.canvas.getContext('webgl');
         if(!(ctx instanceof WebGLRenderingContext)) {
@@ -127,6 +134,8 @@ class OrbitGame {
     /** draw the scene's current state */
     drawScene(programInfo: ShaderProgramInfo, buffers: BufferIndex): void {
 
+        this.wgl.viewport(0, 0, this.vpSize[0], this.vpSize[1]);
+
         //  set the clear color (opaque black) and depth (100%)
         //  configure relations of objects at different depths (?)
         this.wgl.clearColor(0.0, 0.0, 0.0, 1.0);  // Clear to black, fully opaque
@@ -142,10 +151,7 @@ class OrbitGame {
         //  these parameters will be used to calculate elements in a 4x4
         //  projection matrix
         let fov: number = 45 * Math.PI / 180;   // in radians
-        //  TypeScript complaining that clientWidth & clientHeight are not
-        //  properties of type OffscreenCanvas
-        //@ts-ignore
-        let aspect: number = this.wgl.canvas.clientWidth / this.wgl.canvas.clientHeight;
+        let aspect: number = this.vpSize[0] / this.vpSize[1];
         let zNear: number = 0.1;
         let zFar: number = 100.0;
 
