@@ -76,8 +76,13 @@
 /**
  * Graphics summary
  * The simulator will feature a graphic display based on the HTML5 <canvas>
- * element, with GUI components implementing using HTML DOM elements and real-
- * time 3D rendering performed using WebGL.
+ * element, with GUI components implemented using HTML DOM elements and real-
+ * time 3D rendering performed using WebGL (possibly with the help of a
+ * library like three.js or similar).
+ *
+ * Offscreen canvas elements will be utilized to relieve the burden of
+ * rendering shapes that do not change/move from one frame to the next (assuming
+ * this strategy is compatible with the WebGL API).
  */
 /**
  * Caching calculated properties/values
@@ -171,6 +176,8 @@ let ecliptic = new CoordinateSystem('ecliptic');
 console.log(ecliptic.parent.toString());
 
 let game = new OrbitGame();
+console.log(`game initialization result: ${game.init()}`);
+
 let craftCount: number = game.addCraft(new Spacecraft('Explorer 1'));
 console.log(`${craftCount} spacecraft`);
 let explorer1: Spacecraft = game.getCraft(0);

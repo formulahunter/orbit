@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-
-
-class Vector {
-
-=======
 /** Vector class
  *
  * This class represents a geospatial offset or, more generally, some value with
@@ -322,7 +316,6 @@ class Vector {
     valueOf() {
         return [this.x, this.y, this.z, 1];
     }
->>>>>>> physics-model
 }
 
 
