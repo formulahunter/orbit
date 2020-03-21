@@ -60,6 +60,15 @@ class Vector {
         }
     }
 
+    static copy(v: Vector[]): Vector[];
+    static copy(v: Vector): Vector;
+    static copy(v: Vector | Vector[]): Vector[] | Vector {
+        if(Array.isArray(v)) {
+            return v.map(Vector.copy);
+        }
+        return new Vector(...v.valueOf());
+    }
+
 
     /** get this point's position along the x axis */
     get x(): number {
@@ -311,10 +320,9 @@ class Vector {
         return `{${this.theta}, ${this.phi}, ${this.r}}`;
     }
 
-    /** get this instance's raw value as an array of homogeneous coordinates
-     * (potentially useful for using in calculations) */
-    valueOf() {
-        return [this.x, this.y, this.z, 1];
+    /** get this instance's raw value as an array of coordinates */
+    valueOf(): [number, number, number] {
+        return [this.x, this.y, this.z];
     }
 }
 
