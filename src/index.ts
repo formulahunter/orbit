@@ -13,8 +13,9 @@
  * graphics and allow automated or manual control of the craft. In operating the
  * spacecraft, players will hopefully gain a deeper appreciation for and
  * understanding of the complexity and adventurism of space exploration. It is
- * motivated by other similar, very well produced games as well as a keen
- * interest in aeronautics and astronautics.
+ * motivated by other similar, very well produced games; a keen interest in
+ * simulations, especially physics-based sims; and a modest background in
+ * aeronautics and astronautics.
  */
 /**
  * Project goals
@@ -42,12 +43,6 @@
  * [1] https://en.wikipedia.org/wiki/Orbital_mechanics
  */
 /**
- * Graphics summary
- * The simulator will feature a graphic display based on the HTML5 <canvas>
- * element, with GUI components implementing using HTML DOM elements and real-
- * time 3D rendering performed using WebGL.
- */
-/**
  * Development schedule
  * Development will begin with the underlying physics models. Geometric and
  * kinematic concepts will be formalized and implemented first. Kinetics will be
@@ -67,6 +62,22 @@
  * Finally will come "hallway" testing, debugging and implementation tweaks
  * abound. This won't so much be a separate phase of the development process but
  * rather will proceed simultaneously with the other two stages.
+ */
+/**
+ * Simulation structure
+ *
+ *  two loops
+ *    - sim (main) loop runs continuously **in service worker**
+ *      - used to update "global" sim state (reference frames, planets,
+ *        spacecraft, etc.)
+ *    - anim loop runs on browser's animation schedule
+ *      - renders scene using webgl
+ */
+/**
+ * Graphics summary
+ * The simulator will feature a graphic display based on the HTML5 <canvas>
+ * element, with GUI components implementing using HTML DOM elements and real-
+ * time 3D rendering performed using WebGL.
  */
 /**
  * Caching calculated properties/values
