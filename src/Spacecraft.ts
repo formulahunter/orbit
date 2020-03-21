@@ -358,8 +358,9 @@ class Spacecraft {
             //  one triangular elements on bottom surface
             //  two triangular elements on side surface
             //  one triangular elements on top surface
+            //  node adjacent side elements drawn in same "direction" (cw)
             bottom.push([c0, i, i2]);
-            sides.push([i, i + 1, i2], [i + 1, i2, i3]);
+            sides.push([i, i + 1, i2], [i2, i + 1, i3]);
             top.push([c1, i + 1, i3]);
         }
 
