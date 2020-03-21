@@ -157,11 +157,8 @@ import Spacecraft from './Spacecraft.js';
 
 //@ts-ignore
 let game = new OrbitGame();
-let craftCount: number = game.addCraft(new Spacecraft('Explorer 1'));
-console.log(`${craftCount} spacecraft`);
-let explorer1: Spacecraft = game.getCraft(0);
-console.log(explorer1);
-console.log(explorer1 === game.removeCraft(0));
-game.addCraft(explorer1);
-console.log(game.removeCraft(explorer1));
+let vanguard = new Spacecraft('Vanguard-1C');
+vanguard.height = 10;
+vanguard.radius = 1;
+console.debug(vanguard.getElements());
 

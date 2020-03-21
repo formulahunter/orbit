@@ -46,8 +46,6 @@
  * is CM and CP). More realistic would be to give each engine a thrust vector
  * (actually a tensor of one 3-vector and one scalar).
  */
-import Vector from './kinematics/Vector.js';
-
 /**
  * Rationale for property accessors
  * This class defines private properties and public accessor methods, e.g. for
@@ -55,6 +53,14 @@ import Vector from './kinematics/Vector.js';
  * will likely be needed to trigger related changes when their private values
  * are modified (thrust-to-weight ratio in the GUI, for example).
  */
+import Vector from './kinematics/Vector.js';
+
+/** this interface assumes that vertices are grouped into triplets to
+ * compose triangles */
+interface WGLElementData {
+    vertices: number[],
+    elements: number[]
+}
 
 class Spacecraft {
 
@@ -228,6 +234,205 @@ class Spacecraft {
         //  set the payload mass and invalidate the total mass
         this._mass_payload = payload;
         this._mass_total = -1;
+    }
+
+    /** get a vertex array and corresponding element array */
+    getElements(): WGLElementData {
+
+        //  for now the spacecraft is a cylinder
+        return this.getCylinderElements(this.radius, this.height);
+    }
+
+    /** get an array of *all* vertices and corresponding element array for a
+     * cylinder of given radius, height, and radial "resolution" (in degrees)
+     *
+     * this method aims to minimize the number of copies made:
+     *   1. only as many copies are made as *extra* instances are needed -
+     *      original instances are re-used in the new arrays
+     *   2. vertices are *not* duplicated where shared by coplanar faces, so
+     *      none of the top or bottom center vertices are duplicated (all
+     *      elements that share any of those vertices are coplanar)
+     *
+     * the resulting structure will contain 2 vertices (top and bottom centers)
+     * plus the following for each edge around the perimeter:
+     *    - 2 vertices for the top surface (1 element)
+     *    - 4 vertices for the side surface (2 elements)
+     *    - 2 vertices for the bottom surface (1 element)
+     *
+     * in total the returned object will contain (2+4+2)*n+2 Vector instances
+     * where n is the number of edges: n = 360 / inc
+     */
+    getCylinderElements(r: number, h: number, inc: number = 30): WGLElementData {
+
+        //  get a list of vertices
+        let vertices: Vector[] = this.getDistinctCylinderVertices(r, h, inc);
+
+
+        /*
+            make a copy of each vertex for every non-coplanar face which shares
+            that vertex
+         */
+
+        //  pull out the bottom & top centers (no need to duplicate those
+        //  as all the faces that share either one are coplanar)
+        //  they will be placed in the final vertex array in the same positions
+        let centers: Vector[] = vertices.splice(0, 2);
+
+        //  separate vertices by surface so copies can be made as necessary
+        //  note the order - bottom, side, top - must be consistent throughout
+        //  this method
+        let botVerts: Vector[] = [];
+        let sideVerts: Vector[] = [];
+        let topVerts: Vector[] = [];
+
+        //  loop around the perimeter (note i+=2)
+        //  add copies of each vertex to the appropriate vertex arrays
+        //  make sure that vertex references wrap back around to the start of
+        //  of the vertices array in the final iteration
+        //  revisit - maybe should rethink calculating i2 & i3 on every
+        //      iteration (for performance reasons)
+        //      ...but then again it saves arithmetic ops in push() calls...
+        let i2: number, i3: number;
+        for(let i = 0; i < vertices.length; i += 2) {
+
+            //  for index-out-of-bounds safeguard
+            i2 = i + 2;
+            i3 = i + 3;
+
+            //  should only be true in the final iteration b/c i incremented
+            //  by 2
+            if(i3 >= vertices.length) {
+                //  i + 2 => 0 & i + 3 => 1
+                i2 = 0; //  (i+2)%vertices.length = 0
+                i3 = 1; //  (i+3)%vertices.length = 1
+            }
+
+            //  make all copies for the side at once
+            //  pass the originals to top & bottom (no need for more copies)
+            botVerts.push(vertices[i + 1], vertices[i3]);
+            sideVerts.push(...Vector.copy([vertices[i], vertices[i + 1],
+                vertices[i2], vertices[i3]]));
+            topVerts.push(vertices[i], vertices[i2]);
+        }
+
+        //  copies of all vertices have now been partitioned into either the
+        //  bottom, side, or top array
+        //  concat the resulting arrays into a final vertex array
+        let finalVerts: Vector[] = centers.concat(botVerts)
+                                          .concat(sideVerts)
+                                          .concat(topVerts);
+
+
+        /*
+            record triplets of indices that group vertices into (triangular)
+            elements
+        */
+
+        //  indices of bottom & top center vertices
+        const c0: number = 0;   //  bottom
+        const c1: number = 1;   //  top
+
+        //  indices of vertices grouped by element for bottom, side, and top
+        //  surfaces
+        let bottom: [number, number, number][] = [];
+        let sides: [number, number, number][] = [];
+        let top: [number, number, number][] = [];
+
+        //  make sure that vertex references wrap back around to the start of
+        //  of the vertices array in the final iteration
+        for(let i = 2; i < finalVerts.length; i += 2) {
+
+            //  for index-out-of-bounds safeguard
+            i2 = i + 2;
+            i3 = i + 3;
+
+            //  should only be true in the final iteration b/c i incremented
+            //  by 2
+            if(i3 >= finalVerts.length) {
+                //  i + 2 => 0 & i + 3 => 1
+                i2 = 0; //  (i+2)%vertices.length = 0
+                i3 = 1; //  (i+3)%vertices.length = 1
+            }
+
+            //  add vector indices in groups of three
+            //  one triangular elements on bottom surface
+            //  two triangular elements on side surface
+            //  one triangular elements on top surface
+            bottom.push([c0, i, i2]);
+            sides.push([i, i + 1, i2], [i + 1, i2, i3]);
+            top.push([c1, i + 1, i3]);
+        }
+
+        //  REVISIT: FOR DEVELOPMENT THIS METHOD GROUPS VECTORS AND INDICES INTO
+        //      NESTED ARRAYS AND FLATTENS THE FINAL ARRAYS BEFORE RETURNING
+        //      THESE REDUNDANT STEPS SHOULD BE REMOVED AFTER SUFFICIENT TESTING
+        //      ALSO, ELIMINATE INTERMEDIATE ARRAYS AND COMPILE VERT & ELEMENT
+        //      ARRAYS INCREMENTALLY
+        return {
+            vertices: finalVerts.map(v => v.valueOf()).flat(),
+            elements: bottom.concat(sides).concat(top).flat()
+        };
+    }
+
+    /** get an array of coordinates of all *distinct* vertices */
+    getDistinctVertices(): Vector[] {
+        return this.getDistinctCylinderVertices(this.radius, this.height);
+    }
+
+    /**
+     * get an array of *distinct* vertices for a cylinder of given radius,
+     * height, and radial "resolution" (in degrees)
+     *
+     * many of these vertices will need to be duplicated before passing to WebGL
+     * (vertices will be assigned normals based on which face they belong to, so
+     * non-coplanar faces cannot share a vertex)
+     *
+     * first two vertices are centers of the bottom and top faces, respectively.
+     * remaining vertices ordered with alternating bottom/top vertices (see
+     * diagram below).
+     *
+     * center of bottom face will be positioned at (x, y, z) = (0, 0, 0)
+     *
+     *   2--4--6--8
+     *   | /| /| /|
+     *   |/ |/ |/ |
+     *   1--3--5--7
+     *   |--|
+     *    ^
+     *   inc (degrees)
+     *
+     * returned array will contain 2*inc+2 Vector instances
+     */
+    getDistinctCylinderVertices(r: number, h: number, inc: number = 30): Vector[] {
+
+        //  possibly helpful debugging output
+        if(r === 0) {
+            console.debug('spacecraft %o being drawn with 0 radius', this);
+        }
+        if(h === 0) {
+            console.debug('spacecraft %o being drawn with 0 height', this);
+        }
+
+        //  start with the centers of the bottom (z = 0) and top (z = h) faces
+        let vertices: Vector[] = [
+            new Vector(0, 0, 0),
+            new Vector(0, 0, h)
+        ];
+
+        //  calculate coordinates of remaining vertices
+        const TWO_PI = 2 * Math.PI;
+        inc = inc * Math.PI / 180; //  convert the increment angle to radians
+        let x: number, y: number;
+        for(let theta = 0; theta < TWO_PI; theta += inc) {
+
+            x = r * Math.cos(theta);
+            y = r * Math.sin(theta);
+
+            //  push bottom first, then top
+            vertices.push(new Vector(x, y, 0), new Vector(x, y, h));
+        }
+
+        return vertices;
     }
 }
 
