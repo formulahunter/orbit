@@ -438,4 +438,4 @@ class Spacecraft {
 }
 
 
-export default Spacecraft;
+export {Spacecraft, WGLElementData};

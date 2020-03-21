@@ -168,18 +168,15 @@
  * - https://en.wikipedia.org/wiki/Falcon_9_Full_Thrust
  */
 
-import CoordinateSystem from './kinematics/CoordinateSystem.js';
 import OrbitGame from './OrbitGame.js';
-import Spacecraft from './Spacecraft.js';
-
-let ecliptic = new CoordinateSystem('ecliptic');
-console.log(ecliptic.parent.toString());
-
-let game = new OrbitGame();
-console.log(`game initialization result: ${game.init()}`);
+import {Spacecraft} from './Spacecraft.js';
 
 let vanguard = new Spacecraft('Vanguard-1C');
 vanguard.height = 10;
 vanguard.radius = 1;
 console.debug(vanguard.getElements());
+
+let game = new OrbitGame();
+game.addCraft(vanguard);
+console.log(`game initialization result: ${game.init()}`);
 
