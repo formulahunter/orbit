@@ -56,6 +56,8 @@ import Vector from './kinematics/Vector.js';
  * are modified (thrust-to-weight ratio in the GUI, for example).
  */
 
+
+/** an orbital class vehicle carrying a payload */
 class Spacecraft {
 
     private _name: string;
@@ -231,5 +233,129 @@ class Spacecraft {
     }
 }
 
+
+/** any thrust-producing structure - may or may not be intended for orbit
+ * internal class for use in Spacecraft implementation */
+class PropulsiveVehicle {
+
+    /** interface to structural components and aggregate parameters */
+    private structure: VehicleStructure = {
+        components: {
+            structural: [],     //  purely structural components (incl. batteries)
+            reservoir: [],      //  propellant tanks, etc.
+            powerplant: [],     //  engines (incl. orbital thrusters)
+            payload: [],        //  "interchangable"
+            external: []        //  e.g. side boosters, can be considered "spacecraft" in their own right for the purposes of implementation
+        }
+    };
+}
+
+/** components & methods of a vehicle's structure */
+class VehicleStructure {
+
+    private _mass_total: number = -1;
+    private _mass_empty: number = -1;
+    private _mass_propellant: number = -1;
+    private _mass_payload: number = -1;
+
+    /** an object mapping the CATEGORIES enum types to arrays of
+     * StructuralComponents
+     */
+    components: StructuralComponents;
+
+    /** construct a new VehicleStructure instance with optional
+     * StructuralComponent arrays */
+    constructor(structComps: StructuralComponent[] = [],
+                resComps: StructuralComponent[] = [],
+                powerComps: StructuralComponent[] = [],
+                payComps: StructuralComponent[] = [],
+                extComps: StructuralComponent[] = []) {
+
+        this.components = {
+            structural: structComps,
+            reservoir: resComps,
+            powerplant: powerComps,
+            payload: payComps,
+            external: extComps
+        };
+    }
+
+
+
+    /** get the total mass as the sum of empty, propellant and payload masses */
+    get mass(): number {
+
+        if(this._mass_total < 0) {
+
+            let mass: number = 0;
+            for(let type in this.components) {
+                //@ts-ignore
+                for(let comp of this.components[type]) {
+                    if(!this.components.hasOwnProperty(type)) {
+                        continue;
+                    }
+                    mass += comp.mass;
+                }
+                for(let i = 0; i < this.components[type].length; i++) {
+
+                }
+            }
+
+            this._mass_total = empty + fuel + payload;
+        }
+
+        return this._mass_total;
+    }
+
+    /** get the empty mass (total less propellant and payload) */
+    get emptyMass(): number {
+
+        if(this._mass_empty < 0) {
+            console.debug('undefined empty mass for spacecraft %o', this);
+            throw new TypeError('undefined empty mass');
+        }
+
+        return this._mass_empty;
+    }
+
+    /** get the propellant mass */
+    get propellantMass(): number {
+
+        if(this._mass_propellant < 0) {
+            console.debug('undefined propellant mass for spacecraft %o', this);
+            throw new TypeError('undefined propellant mass');
+        }
+
+        return this._mass_propellant;
+    }
+
+    /** get the payload mass */
+    get payloadMass(): number {
+
+        if(this._mass_payload < 0) {
+            console.debug('undefined payload mass for spacecraft %o', this);
+            throw new TypeError('undefined payload mass');
+        }
+
+        return this._mass_payload;
+    }
+}
+
+type Partial<T> = {
+    [P in keyof T]?: T[P];
+}
+interface StructuralComponents {
+    structural: StructuralComponent[],
+    reservoir: StructuralComponent[],
+    powerplant: StructuralComponent[],
+    payload: StructuralComponent[],
+    external: StructuralComponent[]
+}
+
+class StructuralComponent {
+
+
+
+}
 
 export default Spacecraft;
