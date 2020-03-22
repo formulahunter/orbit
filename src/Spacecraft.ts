@@ -262,10 +262,10 @@ class Spacecraft {
      * in total the returned object will contain (2+4+2)*n+2 Vector instances
      * where n is the number of edges: n = 360 / inc
      */
-    getCylinderElements(r: number, h: number, inc: number = 30): WGLElementData {
+    getCylinderElements(r: number, h: number, edges: number = 12): WGLElementData {
 
         //  get a list of vertices
-        let vertices: Vector[] = this.getDistinctCylinderVertices(r, h, inc);
+        let vertices: Vector[] = this.getDistinctCylinderVertices(r, h, edges);
 
 
         /*
@@ -374,7 +374,7 @@ class Spacecraft {
      *
      * returned array will contain 2*inc+2 Vector instances
      */
-    getDistinctCylinderVertices(r: number, h: number, inc: number = 30): Vector[] {
+    getDistinctCylinderVertices(r: number, h: number, edges: number = 12): Vector[] {
 
         //  possibly helpful debugging output
         if(r === 0) {
@@ -392,7 +392,7 @@ class Spacecraft {
 
         //  calculate coordinates of remaining vertices
         const TWO_PI = 2 * Math.PI;
-        inc = inc * Math.PI / 180; //  convert the increment angle to radians
+        const inc = TWO_PI / edges;    // incremental angle in radians
         let x: number, y: number;
         for(let theta = 0; theta < TWO_PI; theta += inc) {
 
