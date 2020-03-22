@@ -172,7 +172,7 @@ import OrbitGame from './OrbitGame.js';
 import {Spacecraft} from './Spacecraft.js';
 
 let vanguard = new Spacecraft('Vanguard-1C');
-vanguard.height = 10;
+vanguard.height = 1;
 vanguard.radius = 1;
 console.debug(vanguard.getElements());
 

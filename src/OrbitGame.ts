@@ -16,21 +16,37 @@ type BufferIndex = {
     [buf: string]: WebGLBuffer
 };
 
+function triplets<T>(acc: T[][], val:T): T[][] {
+    if(acc[acc.length-1].length < 3) {
+        acc[acc.length-1].push(val);
+    }
+    else {
+        acc.push([val]);
+    }
+    return acc;
+}
+
 /** vertex shader source code */
 const vsSource = `
     attribute vec4 aVertexPosition;
+    attribute vec4 aVertexColor;
 
     uniform mat4 uModelViewMatrix;
     uniform mat4 uProjectionMatrix;
+    
+    varying lowp vec4 vColor;
 
     void main() {
       gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+      vColor = aVertexColor;
     }
   `;
 /** fragment shader source code */
 const fsSource = `
+    varying lowp vec4 vColor;
+    
     void main() {
-      gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+      gl_FragColor = vColor;
     }
   `;
 
@@ -186,7 +202,10 @@ class OrbitGame {
     }
 
 
-    /** draw the scene's current state */
+    /** draw the scene's current state
+     *
+     * THIS IMPLEMENTATION ASSUMES A CYLINDRICAL SHAPE WITH EXACTLY 12 EDGES
+     */
     drawScene(programInfo: ShaderProgramInfo, buffers: BufferIndex): void {
 
         this.wgl.viewport(0, 0, this.vpSize[0], this.vpSize[1]);
@@ -222,6 +241,9 @@ class OrbitGame {
         mat4.translate(modelViewMatrix,     //  destination matrix
                         modelViewMatrix,    //  source matrix
                         [-0.0, 0.0, -16.0]);  //  amount to translate
+        mat4.rotateX(modelViewMatrix, modelViewMatrix, 3 * Math.PI / 8);
+        mat4.rotateZ(modelViewMatrix, modelViewMatrix, 3 * Math.PI / 4);
+        mat4.scale(modelViewMatrix, modelViewMatrix, [3.0, 3.0, 3.0]);
 
         //  describe exactly what the values entered into the position buffer
         //  are (i.e. each "position" defined in initBuffers() is a pair of
@@ -252,24 +274,24 @@ class OrbitGame {
         }
 
         //  tell wgl how to pull color attributes from the color array buffer
-        // {
-        //     const numComponents: number = 4;        //  4 values each (rgba)
-        //     const type: GLenum = this.wgl.FLOAT;
-        //     const normalize: boolean = false;
-        //     const stride: number = 0;
-        //     const offset: number = 0;
-        //     this.wgl.bindBuffer(this.wgl.ARRAY_BUFFER, buffers.color);
-        //     this.wgl.vertexAttribPointer(
-        //         programInfo.attributes.vertexColor,
-        //         numComponents,
-        //         type,
-        //         normalize,
-        //         stride,
-        //         offset
-        //     );
-        //     this.wgl.enableVertexAttribArray(
-        //         programInfo.attributes.vertexColor);
-        // }
+        {
+            const numComponents: number = 4;        //  4 values each (rgba)
+            const type: GLenum = this.wgl.FLOAT;
+            const normalize: boolean = false;
+            const stride: number = 0;
+            const offset: number = 0;
+            this.wgl.bindBuffer(this.wgl.ARRAY_BUFFER, buffers.color);
+            this.wgl.vertexAttribPointer(
+                programInfo.attributes.vertexColor,
+                numComponents,
+                type,
+                normalize,
+                stride,
+                offset
+            );
+            this.wgl.enableVertexAttribArray(
+                programInfo.attributes.vertexColor);
+        }
 
         //  designate the program to use when drawing
         this.wgl.useProgram(programInfo.program);
@@ -290,13 +312,25 @@ class OrbitGame {
 
         this.wgl.bindBuffer(this.wgl.ELEMENT_ARRAY_BUFFER, buffers.indices);
 
-        //  actually draw the square
-        //  again note the use of curly braces
+        //  draw the bottom and top surfaces as triangle fans
         {
-            const offset: number = 0;
-            const vertexCount: number = 48;
-            const type = this.wgl.UNSIGNED_SHORT;
-            this.wgl.drawElements(this.wgl.TRIANGLES, vertexCount, type, offset);
+            //  draw bottom surface
+            let offset: number = 0;
+            let vertexCount: number = 14;
+            let type = this.wgl.UNSIGNED_SHORT;
+            this.wgl.drawElements(this.wgl.TRIANGLE_FAN, vertexCount, type, offset);
+
+            // draw top surface
+            offset = 14;
+            this.wgl.drawElements(this.wgl.TRIANGLE_FAN, vertexCount, type, offset);
+        }
+
+        //  draw the side surfaces as a triangle strip
+        {
+            let offset: number = 28;
+            let vertexCount: number = 26;
+            let type: GLenum = this.wgl.UNSIGNED_SHORT;
+            this.wgl.drawElements(this.wgl.TRIANGLE_STRIP, vertexCount, type, offset);
         }
     }
 
@@ -368,7 +402,10 @@ class OrbitGame {
     }
 
     /** initialize and return a buffer for vertices of the first spacecraft in
-     *  the master craft list
+     * the master craft list
+     *
+     * THIS IMPLEMENTATION ASSUMES A CYLINDRICAL SHAPE WITH EXACTLY 12 EDGES
+     *
      * @throws TypeError - wgl.createBuffer returned an invalid buffer */
     initBuffers(): BufferIndex {
 
@@ -386,6 +423,12 @@ class OrbitGame {
 
         //  get vertex & element arrays for the craft
         const elements: WGLElementData = this.getCraft().getElements();
+        console.debug('final vertices array: %o', elements.vertices);
+        console.debug('(x, y, z coords: %0',
+            elements.vertices.map(val => val.toFixed(3))
+            // @ts-ignore
+                             .reduce(triplets, [[]]));
+        console.debug('final indices array: %o', elements.indices);
 
         //  fill the array buffer with a typed array derived from the positions
         //  array previously defined
@@ -399,25 +442,45 @@ class OrbitGame {
                             Float32Array.from(elements.vertices),
                             this.wgl.STATIC_DRAW);
 
-        //  define 4 rgba colors (one for each vertex of the square)
-        // const colors: number[] = [
-        //     1.0, 1.0, 1.0, 1.0,     //  white
-        //     1.0, 0.0, 0.0, 1.0,     //  red
-        //     0.0, 1.0, 0.0, 1.0,     //  green
-        //     0.0, 0.0, 1.0, 1.0      //  blue
-        // ];
+        //  define color sequences for the bottom/top and side surfaces
+        //  bottom/top surfaces drawn with a conic gradient where theta=0 is
+        //  black, theta=2pi is white, and the center vertex is black
+        //  side vertices alternate between white & black: each pair of top
+        //  & bottom vertex is assigned the opposite color as the previous,
+        //  with the possible exception of the vertices @ theta=0 in the case
+        //  that the number of edges is odd
+        const edges = 12;
 
-        //
-        // const colorBuffer: WebGLBuffer | null = this.wgl.createBuffer();
-        // if(!(colorBuffer instanceof WebGLBuffer)) {
-        //     console.debug('invalid buffer returned from wgl.createBuffer():' +
-        //         ' %o', colorBuffer);
-        //     throw new TypeError(`invalid color buffer`);
-        // }
-        // this.wgl.bindBuffer(this.wgl.ARRAY_BUFFER, colorBuffer);
-        // this.wgl.bufferData(this.wgl.ARRAY_BUFFER,
-        //                     Float32Array.from(colors),
-        //                     this.wgl.STATIC_DRAW);
+        //  start with the bottom surface
+        //  center black node & 13 perimeter nodes blended from black to white
+        let colors: number[] = [0.0, 0.0, 0.0, 1.0];  // bot/center always blk
+        let shade: number;
+        //  number of edges + 1 node duplicated (also makes last shade 12/12=1)
+        for(let i = 0; i < edges + 1; i++) {
+            shade = i / edges;
+            colors.push(shade, shade, shade, 1.0);
+        }
+        //  add another copy of this gradient for the top surface
+        colors = colors.concat(colors.slice());
+
+        //  alternate *pairs* of vertices between black & white
+        for(let i = 0; i < edges + 1; i++) {
+            shade = i % 2.0;
+            colors.push(shade, shade, shade, 1.0, shade, shade, shade, 1.0);
+        }
+        console.debug('final color array: %o', colors);
+
+
+        const colorBuffer: WebGLBuffer | null = this.wgl.createBuffer();
+        if(!(colorBuffer instanceof WebGLBuffer)) {
+            console.debug('invalid buffer returned from wgl.createBuffer():' +
+                ' %o', colorBuffer);
+            throw new TypeError(`invalid color buffer`);
+        }
+        this.wgl.bindBuffer(this.wgl.ARRAY_BUFFER, colorBuffer);
+        this.wgl.bufferData(this.wgl.ARRAY_BUFFER,
+                            Float32Array.from(colors),
+                            this.wgl.STATIC_DRAW);
 
         const indexBuffer = this.wgl.createBuffer();
         if(!(indexBuffer instanceof WebGLBuffer)) {
@@ -427,12 +490,12 @@ class OrbitGame {
         }
         this.wgl.bindBuffer(this.wgl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         this.wgl.bufferData(this.wgl.ELEMENT_ARRAY_BUFFER,
-                            Uint16Array.from(elements.elements),
+                            Uint16Array.from(elements.indices),
                             this.wgl.STATIC_DRAW);
 
         return {
             position: positionBuffer,
-            // color: colorBuffer,
+            color: colorBuffer,
             indices: indexBuffer
         };
     }

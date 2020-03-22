@@ -59,7 +59,7 @@ import Vector from './kinematics/Vector.js';
  * compose triangles */
 interface WGLElementData {
     vertices: number[],
-    elements: number[]
+    indices: number[]
 }
 
 class Spacecraft {
@@ -275,94 +275,64 @@ class Spacecraft {
 
         //  pull out the bottom & top centers (no need to duplicate those
         //  as all the faces that share either one are coplanar)
-        //  they will be placed in the final vertex array in the same positions
+        //  they will be repositioned in the final vertex array anyway
         let centers: Vector[] = vertices.splice(0, 2);
 
         //  separate vertices by surface so copies can be made as necessary
-        //  note the order - bottom, side, top - must be consistent throughout
+        //  note the order - bottom, top, side - must be consistent throughout
         //  this method
-        let botVerts: Vector[] = [];
+        let botVerts: Vector[] = [centers[0]];
+        let topVerts: Vector[] = [centers[1]];
         let sideVerts: Vector[] = [];
-        let topVerts: Vector[] = [];
 
         //  loop around the perimeter (note i+=2)
         //  add copies of each vertex to the appropriate vertex arrays
-        //  make sure that vertex references wrap back around to the start of
-        //  of the vertices array in the final iteration
-        //  revisit - maybe should rethink calculating i2 & i3 on every
-        //      iteration (for performance reasons)
-        //      ...but then again it saves arithmetic ops in push() calls...
-        let i2: number, i3: number;
+        //  manually add the final vertex/pair to each array after the loop
         for(let i = 0; i < vertices.length; i += 2) {
 
-            //  for index-out-of-bounds safeguard
-            i2 = i + 2;
-            i3 = i + 3;
-
-            //  should only be true in the final iteration b/c i incremented
-            //  by 2
-            if(i3 >= vertices.length) {
-                //  i + 2 => 0 & i + 3 => 1
-                i2 = 0; //  (i+2)%vertices.length = 0
-                i3 = 1; //  (i+3)%vertices.length = 1
-            }
-
-            //  make all copies for the side at once
+            //  make all copies for the sides at once
             //  pass the originals to top & bottom (no need for more copies)
-            botVerts.push(...Vector.copy([vertices[i], vertices[i2]]));
-            sideVerts.push(...Vector.copy([vertices[i], vertices[i + 1],
-                vertices[i2], vertices[i3]]));
-            topVerts.push(...Vector.copy([vertices[i + 1], vertices[i3]]));
+            botVerts.push(vertices[i]);
+            topVerts.push(vertices[i + 1]);
+            sideVerts.push(...Vector.copy([vertices[i], vertices[i + 1]]));
         }
 
+        //  add final vertices/elements to each array
+        //  so that, e.g., top & bottom surfaces draw one final element
+        //  connecting back to the first element
+        botVerts.push(Vector.copy(vertices[0]));
+        topVerts.push(Vector.copy(vertices[1]));
+        sideVerts.push(...Vector.copy([vertices[0], vertices[1]]));
+
         //  copies of all vertices have now been partitioned into either the
-        //  bottom, side, or top array
+        //  bottom, top, or side array
         //  concat the resulting arrays into a final vertex array
-        let finalVerts: Vector[] = centers.concat(botVerts)
-                                          .concat(sideVerts)
-                                          .concat(topVerts);
+        let finalVerts: Vector[] = botVerts.concat(topVerts).concat(sideVerts);
 
 
         /*
-            record triplets of indices that group vertices into (triangular)
-            elements
+            record indices of successive vertices in the finalVerts array
         */
 
-        //  indices of bottom & top center vertices
-        const c0: number = 0;   //  bottom
-        const c1: number = 1;   //  top
+        //  define a mapping function to add a given offset to the index of
+        //  every element in an array
+        //  this function is meant to be used with .bind() which is why the
+        //  offset is its first argument (not 'el' as would normally be the case
+        //  with function arguments to map()
+        //  the _ underscore prefix for the 'el' and 'arr' arguments just tells
+        //  TypeScript to ignore what would otherwise be an "unused parameter"
+        //  error
+        function offInd<T>(off: number, _el: T, ind: number, _arr: T[]) {return ind + off}
 
-        //  indices of vertices grouped by element for bottom, side, and top
-        //  surfaces
-        let bottom: [number, number, number][] = [];
-        let sides: [number, number, number][] = [];
-        let top: [number, number, number][] = [];
-
-        //  make sure that vertex references wrap back around to the start of
-        //  of the vertices array in the final iteration
-        for(let i = 2; i < finalVerts.length; i += 2) {
-
-            //  for index-out-of-bounds safeguard
-            i2 = i + 2;
-            i3 = i + 3;
-
-            //  should only be true in the final iteration b/c i incremented
-            //  by 2
-            if(i3 >= finalVerts.length) {
-                //  i + 2 => 0 & i + 3 => 1
-                i2 = 0; //  (i+2)%vertices.length = 0
-                i3 = 1; //  (i+3)%vertices.length = 1
-            }
-
-            //  add vector indices in groups of three
-            //  one triangular elements on bottom surface
-            //  two triangular elements on side surface
-            //  one triangular elements on top surface
-            //  node adjacent side elements drawn in same "direction" (cw)
-            bottom.push([c0, i, i2]);
-            sides.push([i, i + 1, i2], [i2, i + 1, i3]);
-            top.push([c1, i + 1, i3]);
-        }
+        //  since all vertices are arranged in order while making copies, the
+        //  index array members will just be the numbers 0 through
+        //  finalVerts.length - 1
+        //  however, in case the implementation changes at some point so that
+        //  premise is not valid, populate the indices array with the component
+        //  array indices and offsets
+        let indices: number[] = botVerts.map(offInd.bind(null, 0))
+                                         .concat(topVerts.map(offInd.bind(null, botVerts.length)))
+                                         .concat(sideVerts.map(offInd.bind(null, botVerts.length + topVerts.length)));
 
         //  REVISIT: FOR DEVELOPMENT THIS METHOD GROUPS VECTORS AND INDICES INTO
         //      NESTED ARRAYS AND FLATTENS THE FINAL ARRAYS BEFORE RETURNING
@@ -371,7 +341,7 @@ class Spacecraft {
         //      ARRAYS INCREMENTALLY
         return {
             vertices: finalVerts.map(v => v.valueOf()).flat(),
-            elements: bottom.concat(sides).concat(top).flat()
+            indices: indices
         };
     }
 
