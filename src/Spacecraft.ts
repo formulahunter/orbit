@@ -309,10 +309,10 @@ class Spacecraft {
 
             //  make all copies for the side at once
             //  pass the originals to top & bottom (no need for more copies)
-            botVerts.push(vertices[i + 1], vertices[i3]);
+            botVerts.push(...Vector.copy([vertices[i], vertices[i2]]));
             sideVerts.push(...Vector.copy([vertices[i], vertices[i + 1],
                 vertices[i2], vertices[i3]]));
-            topVerts.push(vertices[i], vertices[i2]);
+            topVerts.push(...Vector.copy([vertices[i + 1], vertices[i3]]));
         }
 
         //  copies of all vertices have now been partitioned into either the
