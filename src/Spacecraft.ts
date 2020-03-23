@@ -281,8 +281,8 @@ class Spacecraft {
         //  separate vertices by surface so copies can be made as necessary
         //  note the order - bottom, top, side - must be consistent throughout
         //  this method
-        let botVerts: Vector[] = [centers[0]];
-        let topVerts: Vector[] = [centers[1]];
+        let topVerts: Vector[] = [centers[0]];
+        let botVerts: Vector[] = [centers[1]];
         let sideVerts: Vector[] = [];
 
         //  loop around the perimeter (note i+=2)
