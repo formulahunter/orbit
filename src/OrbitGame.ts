@@ -315,22 +315,27 @@ class OrbitGame {
         //  draw the bottom and top surfaces as triangle fans
         {
             //  draw bottom surface
+            //  the offset argument must be a multiple of the size of the data
+            //  type in the element array buffer (when using drawElements())
+            //  the UNSIGNED SHORT type is 2 bytes
+            const SIZEOF_USHORT: number = 2;
             let offset: number = 0;
             let vertexCount: number = 14;
             let type = this.wgl.UNSIGNED_SHORT;
-            this.wgl.drawElements(this.wgl.TRIANGLE_FAN, vertexCount, type, offset);
+            this.wgl.drawElements(this.wgl.TRIANGLE_FAN, vertexCount, type, offset * SIZEOF_USHORT);
 
             // draw top surface
             offset = 14;
-            this.wgl.drawElements(this.wgl.TRIANGLE_FAN, vertexCount, type, offset);
+            this.wgl.drawElements(this.wgl.TRIANGLE_FAN, vertexCount, type, offset * SIZEOF_USHORT);
         }
 
         //  draw the side surfaces as a triangle strip
         {
+            const SIZEOF_USHORT: number = 2;
             let offset: number = 28;
             let vertexCount: number = 26;
             let type: GLenum = this.wgl.UNSIGNED_SHORT;
-            this.wgl.drawElements(this.wgl.TRIANGLE_STRIP, vertexCount, type, offset);
+            this.wgl.drawElements(this.wgl.TRIANGLE_STRIP, vertexCount, type, offset * SIZEOF_USHORT);
         }
     }
 
