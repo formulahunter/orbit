@@ -83,6 +83,58 @@
  * Offscreen canvas elements will be utilized to relieve the burden of
  * rendering shapes that do not change/move from one frame to the next (assuming
  * this strategy is compatible with the WebGL API).
+ *
+ * Some invaluable links for learning WebGL/OpenGL concepts:
+ *  - developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Tutorial
+ *  - https://www.creativebloq.com/javascript/get-started-webgl-draw-square-7112981
+ *    - *OLD* less thorough but easier to digest tutorial; also good to compare
+ *      another implementation of the same result
+ *  - webglfundamentals.org
+ *  - http://learnwebgl.brown37.net/index.html
+ *  - learnopengl.com
+ *  - https://www.khronos.org/webgl/
+ *    - https://www.khronos.org/webgl/wiki/Main_Page
+ *    - https://www.khronos.org/registry/OpenGL/specs/es/2.0/es_full_spec_2.0.pdf
+ *
+ *
+ * Some resources for practical use:
+ *  - ubiquitous WebGL framework/API
+ *    - https://threejs.org/
+ *  - used on webglfundamentals.org
+ *    - http://twgljs.org/
+ *  - used in MDN's WebGL tutorials
+ *    - http://glmatrix.net/
+ *  - glmatrix refactored as es6 module
+ *    - https://unpkg.com/browse/gl-matrix@3.1.0/esm/
+ *  - glmatrix TS type declarations
+ *    - https://www.npmjs.com/package/@types/gl-matrix
+ *  - possible pincushion transform in GLSL
+ *    - https://gamedev.stackexchange.com/questions/98068/how-do-i-wrap-an-image-around-a-sphere
+ *  - and another
+ *    - http://marcodiiga.github.io/radial-lens-undistortion-filtering
+ *
+ *
+ * Examples
+ *  - simple 3D game in javascript with nod to WebGL & links to similar games
+ *    - http://frankforce.com/?p=7427
+ *  - launch simulator on flightclub.io
+ *    - https://flightclub.io/earth
+ *
+ *
+ * NASA Deep Star Maps
+ *  - high-res full-sky star plots in galactic & equatorial reference frames
+ *    - https://svs.gsfc.nasa.gov/3895
+ *
+ *
+ * spherical mathsez
+ *  - good explanation of spherical projection in terms of great circles
+ *    - https://math.stackexchange.com/questions/92654/lat-long-grid-points-covered-by-projecting-rectangle-onto-sphere
+ *  - brief, dense vector geometry notes
+ *    - https://sites.math.washington.edu/~king/coursedir/m445w04/notes/vector/coord.html
+ *  - generate vertices of a sphere
+ *    - https://gamedev.stackexchange.com/questions/31308/algorithm-for-creating-spheres
+ *  - broad projection info/reference (not just spherical)
+ *    - https://proj.org/operations/projections/index.html
  */
 /**
  * Caching calculated properties/values
