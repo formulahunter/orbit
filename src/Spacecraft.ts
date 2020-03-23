@@ -265,7 +265,7 @@ class Spacecraft {
     getCylinderElements(r: number, h: number, edges: number = 12): WGLElementData {
 
         //  get a list of vertices
-        let vertices: Vector[] = this.getDistinctCylinderVertices(r, h, edges);
+        let vertices: CylinderVertices = this.getDistinctCylinderVertices(r, h, edges);
 
 
         /*
@@ -273,81 +273,48 @@ class Spacecraft {
             that vertex
          */
 
-        //  pull out the bottom & top centers (no need to duplicate those
-        //  as all the faces that share either one are coplanar)
-        //  they will be repositioned in the final vertex array anyway
-        let centers: Vector[] = vertices.splice(0, 2);
-
-        //  separate vertices by surface so copies can be made as necessary
-        //  note the order - top, bottom, side - must be consistent throughout
-        //  this method
-        let topVerts: Vector[] = [centers[0]];
-        let botVerts: Vector[] = [centers[1]];
+        //  use original vertices for the top & bottom surfaces/elements
+        //  make copies of each vertex for the side elements
+        //  pair vertices in alternating top/bottom order
         let sideVerts: Vector[] = [];
+        for(let i = 0; i < edges; ++i) {
 
-        //  loop around the perimeter (note i+=2)
-        //  add copies of each vertex to the appropriate vertex arrays
-        //  manually add the final vertex/pair to each array after the loop
-        for(let i = 0; i < vertices.length; i += 2) {
-
-            //  make all copies for the sides at once
-            //  pass the originals to top & bottom (no need for more copies)
-            topVerts.push(vertices[i]);
-            botVerts.push(vertices[i + 1]);
-            sideVerts.push(...Vector.copy([vertices[i], vertices[i + 1]]));
+            sideVerts.push(
+                ...Vector.copy([
+                    vertices.top.prmtr[i],
+                    vertices.bottom.prmtr[edges - i - 1]
+                ])
+            );
         }
 
         //  add final vertices/elements to each array
         //  so that, e.g., top & bottom surfaces draw one final element
         //  connecting back to the first element
-        topVerts.push(Vector.copy(vertices[0]));
-        botVerts.push(Vector.copy(vertices[1]));
-        sideVerts.push(...Vector.copy([vertices[0], vertices[1]]));
+        vertices.top.prmtr.push(Vector.copy(vertices.top.prmtr[0]));
+        vertices.bottom.prmtr.push(Vector.copy(vertices.bottom.prmtr[0]));
+        sideVerts.push(...Vector.copy([sideVerts[0], sideVerts[1]]));
 
-        //  copies of all vertices have now been partitioned into either the
-        //  bottom, top, or side array
         //  concat the resulting arrays into a final vertex array
-        let finalVerts: Vector[] = topVerts.concat(botVerts).concat(sideVerts);
+        let finalVerts: Vector[] = [
+            vertices.top.cntr,
+            ...vertices.top.prmtr,
+            vertices.bottom.cntr,
+            ...vertices.bottom.prmtr,
+            ...sideVerts
+        ];
 
 
         /*
-            record indices of successive vertices in the finalVerts array
+            create an index array for the element array buffer
         */
 
-        //  define a mapping function to add a given offset to the index of
-        //  every element in an array
-        //  this function is meant to be used with .bind() which is why the
-        //  offset is its first argument (not 'el' as would normally be the case
-        //  with function arguments to map()
-        //  the _ underscore prefix for the 'el' and 'arr' arguments just tells
-        //  TypeScript to ignore what would otherwise be an "unused parameter"
+        //  all vertices are arranged in proper order when they are generated
+        //  (including copies), so the element vertex indices will be the same
+        //  as the respective vertex indices in the vertex array
+        //  the underscore (_) prefix on the _el parameter instructs the TS
+        //  compiler to ignore what would otherwise be an 'unused parameter'
         //  error
-        function offInd<T>(off: number, _el: T, ind: number, _arr: T[]) {return ind + off}
-
-        //  webgl "culls" faces based on their "winding order" - "front" faces
-        //  are considered those whose winding order is counterclockwise at the
-        //  rasterization stage (i.e. after all transforms performed by the
-        //  vertex shader)
-        //
-        //  https://learnopengl.com/Advanced-OpenGL/Face-culling
-        //
-        //  bottom & top surface vertices are generated based on their angle
-        //  which is intrinsically counterclockwise
-        //  side surfaces are generated as pairs of vertically aligned vertices,
-        //  with the bottom vertex inserted into the array before the top vertex
-        //  if drawn in "triangle strip" mode in this order, then elements whose
-        //  horizontal edge coincides with the top surface will be wound
-        //  counterclockwise while those whose horizontal edge corresponds with
-        //  the bottom surface will be wound clockwise
-        //  since all vertices are arranged in order while making copies, the
-        //  element vertex indices will just be their respective indices in the
-        //  final vertex array
-        //  however, in case the implementation changes at some point so that
-        //  premise is not valid, populate the indices array with the component
-        //  array indices and offsets
-        let indices: number[] = topVerts.map(offInd.bind(null, 0))
-                                         .concat(botVerts.map(offInd.bind(null, topVerts.length)))
-                                         .concat(sideVerts.map(offInd.bind(null, topVerts.length + botVerts.length)));
+        let indices: number[] = finalVerts.map((_el, ind) => ind);
 
         //  REVISIT: FOR DEVELOPMENT THIS METHOD GROUPS VECTORS AND INDICES INTO
         //      NESTED ARRAYS AND FLATTENS THE FINAL ARRAYS BEFORE RETURNING
@@ -361,7 +328,7 @@ class Spacecraft {
     }
 
     /** get an array of coordinates of all *distinct* vertices */
-    getDistinctVertices(): Vector[] {
+    getDistinctVertices(): CylinderVertices {
         return this.getDistinctCylinderVertices(this.radius, this.height);
     }
 
@@ -375,27 +342,33 @@ class Spacecraft {
      * (vertices will be assigned normals based on which face they belong to, so
      * non-coplanar faces cannot share a vertex)
      *
-     * first two vertices are centers of the top and bottom faces, respectively.
-     * remaining vertices added in alternating top/bottom order. in this order,
-     * vertices/elements will be drawn ("wound") counterclockwise by
-     * wgl.drawArrays() (or drawElements() if the index buffer is in the
-     * same order). the following diagram illustrates vertex indices (positions
-     * in the array) of successive vertices around the perimeter of the cylinder
-     * (as viewed from the side)
+     * the bottom perimeter array is presented in reverse order, i.e. its
+     * vertices are wound clockwise as viewed from above - when the camera is
+     * facing the top of the cylinder the bottom surface will be culled, but
+     * when the camera is rotated to face the bottom of the cylinder the model
+     * space is effectively rotated as well so the bottom will then be wound
+     * counterclockwise and the top will be clockwise.
+     * this ordering also conveniently arranges the vertices in order for
+     * populating buffer arrays to be used by drawElements().
+     * the following diagram illustrates vertex indices (positions in the array)
+     * of successive vertices around the perimeter of the cylinder (as viewed
+     * from the side):
      *
      *       z
      *       |
      *       |
-     *       2--4--6--8
+     *       1--2--3--4
      *       | /| /| /|
      *       |/ |/ |/ |
-     *   0 --3--5--7--9--- theta
+     *   0 --9--8--7--6--- theta
      *       |
      *       0
      *
+     *   *not shown are vertices 0 & 5, the top & bottom centers, respectively
+     *
      * returned array will contain 2*edges+2 Vector instances
      */
-    getDistinctCylinderVertices(r: number, h: number, edges: number = 12): Vector[] {
+    getDistinctCylinderVertices(r: number, h: number, edges: number = 12): CylinderVertices {
 
         //  if either of the following is true it was probably by mistake...
         if(r === 0) {
@@ -405,11 +378,8 @@ class Spacecraft {
             console.debug('spacecraft %o being drawn with 0 height', this);
         }
 
-        //  start with the centers of the top (z = h) and bottom (z = 0) faces
-        let vertices: Vector[] = [
-            new Vector(0, 0, h),
-            new Vector(0, 0, 0)
-        ];
+        let top: Vector[] = [];
+        let bottom: Vector[] = [];
 
         //  calculate coordinates of remaining vertices
         const TWO_PI = 2 * Math.PI;
@@ -420,12 +390,36 @@ class Spacecraft {
             x = r * Math.cos(theta);
             y = r * Math.sin(theta);
 
-            //  push top first, then bottom
-            vertices.push(new Vector(x, y, h), new Vector(x, y, 0));
+            top.push(new Vector(x, y, h));
+            bottom.push(new Vector(x, y, 0));
         }
 
-        return vertices;
+        //  reverse the bottom so elements will be wound ccw
+        bottom.reverse();
+
+        //  include center vertices in returned data
+        return {
+            top: {
+                cntr: new Vector(0, 0, h),
+                prmtr: top
+            },
+            bottom: {
+                cntr: new Vector(0, 0, 0),
+                prmtr: bottom
+            }
+        };
     }
+}
+
+
+interface CylinderVertices {
+    top: DiscVertices,
+    bottom: DiscVertices
+}
+
+interface DiscVertices {
+    cntr: Vector,
+    prmtr: Vector[]
 }
 
 

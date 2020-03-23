@@ -450,8 +450,8 @@ class OrbitGame {
                             Float32Array.from(elements.vertices),
                             this.wgl.STATIC_DRAW);
 
-        //  define color sequences for the bottom/top and side surfaces
-        //  bottom/top surfaces drawn with a conic gradient where theta=0 is
+        //  define color sequences for the top/bottom and side surfaces
+        //  top/bottom surfaces drawn with a conic gradient where theta=0 is
         //  black, theta=2pi is white, and the center vertex is black
         //  side vertices alternate between white & black: each pair of top
         //  & bottom vertex is assigned the opposite color as the previous,
@@ -459,7 +459,7 @@ class OrbitGame {
         //  that the number of edges is odd
         const edges = 12;
 
-        //  start with the bottom surface
+        //  start with the top surface
         //  center black node & 13 perimeter nodes blended from black to white
         let colors: number[] = [0.0, 0.0, 0.0, 1.0];  // bot/center always blk
         let shade: number;
@@ -468,7 +468,7 @@ class OrbitGame {
             shade = i / edges;
             colors.push(shade, shade, shade, 1.0);
         }
-        //  add another copy of this gradient for the top surface
+        //  add another copy of this gradient for the bottom surface
         colors = colors.concat(colors.slice());
 
         //  alternate *pairs* of vertices between black & white
