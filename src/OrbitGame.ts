@@ -217,6 +217,9 @@ class OrbitGame {
         this.wgl.enable(this.wgl.DEPTH_TEST);     // Enable depth testing
         this.wgl.depthFunc(this.wgl.LEQUAL);      // Near things obscure far things
 
+        //  enable culling (back faces is default)
+        this.wgl.enable(this.wgl.CULL_FACE);
+
         //  clear the canvas before drawing on it
         //  same as with CanvasRenderingContext2D
         this.wgl.clear(this.wgl.COLOR_BUFFER_BIT | this.wgl.DEPTH_BUFFER_BIT);
@@ -314,7 +317,7 @@ class OrbitGame {
 
         //  draw the bottom and top surfaces as triangle fans
         {
-            //  draw bottom surface
+            //  draw top surface
             //  the offset argument must be a multiple of the size of the data
             //  type in the element array buffer (when using drawElements())
             //  the UNSIGNED SHORT type is 2 bytes
@@ -324,7 +327,7 @@ class OrbitGame {
             let type = this.wgl.UNSIGNED_SHORT;
             this.wgl.drawElements(this.wgl.TRIANGLE_FAN, vertexCount, type, offset * SIZEOF_USHORT);
 
-            // draw top surface
+            // draw bottom surface
             offset = 14;
             this.wgl.drawElements(this.wgl.TRIANGLE_FAN, vertexCount, type, offset * SIZEOF_USHORT);
         }

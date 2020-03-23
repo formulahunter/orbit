@@ -279,7 +279,7 @@ class Spacecraft {
         let centers: Vector[] = vertices.splice(0, 2);
 
         //  separate vertices by surface so copies can be made as necessary
-        //  note the order - bottom, top, side - must be consistent throughout
+        //  note the order - top, bottom, side - must be consistent throughout
         //  this method
         let topVerts: Vector[] = [centers[0]];
         let botVerts: Vector[] = [centers[1]];
@@ -292,22 +292,22 @@ class Spacecraft {
 
             //  make all copies for the sides at once
             //  pass the originals to top & bottom (no need for more copies)
-            botVerts.push(vertices[i]);
-            topVerts.push(vertices[i + 1]);
+            topVerts.push(vertices[i]);
+            botVerts.push(vertices[i + 1]);
             sideVerts.push(...Vector.copy([vertices[i], vertices[i + 1]]));
         }
 
         //  add final vertices/elements to each array
         //  so that, e.g., top & bottom surfaces draw one final element
         //  connecting back to the first element
-        botVerts.push(Vector.copy(vertices[0]));
-        topVerts.push(Vector.copy(vertices[1]));
+        topVerts.push(Vector.copy(vertices[0]));
+        botVerts.push(Vector.copy(vertices[1]));
         sideVerts.push(...Vector.copy([vertices[0], vertices[1]]));
 
         //  copies of all vertices have now been partitioned into either the
         //  bottom, top, or side array
         //  concat the resulting arrays into a final vertex array
-        let finalVerts: Vector[] = botVerts.concat(topVerts).concat(sideVerts);
+        let finalVerts: Vector[] = topVerts.concat(botVerts).concat(sideVerts);
 
 
         /*
@@ -324,15 +324,30 @@ class Spacecraft {
         //  error
         function offInd<T>(off: number, _el: T, ind: number, _arr: T[]) {return ind + off}
 
+        //  webgl "culls" faces based on their "winding order" - "front" faces
+        //  are considered those whose winding order is counterclockwise at the
+        //  rasterization stage (i.e. after all transforms performed by the
+        //  vertex shader)
+        //
+        //  https://learnopengl.com/Advanced-OpenGL/Face-culling
+        //
+        //  bottom & top surface vertices are generated based on their angle
+        //  which is intrinsically counterclockwise
+        //  side surfaces are generated as pairs of vertically aligned vertices,
+        //  with the bottom vertex inserted into the array before the top vertex
+        //  if drawn in "triangle strip" mode in this order, then elements whose
+        //  horizontal edge coincides with the top surface will be wound
+        //  counterclockwise while those whose horizontal edge corresponds with
+        //  the bottom surface will be wound clockwise
         //  since all vertices are arranged in order while making copies, the
-        //  index array members will just be the numbers 0 through
-        //  finalVerts.length - 1
+        //  element vertex indices will just be their respective indices in the
+        //  final vertex array
         //  however, in case the implementation changes at some point so that
         //  premise is not valid, populate the indices array with the component
         //  array indices and offsets
-        let indices: number[] = botVerts.map(offInd.bind(null, 0))
-                                         .concat(topVerts.map(offInd.bind(null, botVerts.length)))
-                                         .concat(sideVerts.map(offInd.bind(null, botVerts.length + topVerts.length)));
+        let indices: number[] = topVerts.map(offInd.bind(null, 0))
+                                         .concat(botVerts.map(offInd.bind(null, topVerts.length)))
+                                         .concat(sideVerts.map(offInd.bind(null, topVerts.length + botVerts.length)));
 
         //  REVISIT: FOR DEVELOPMENT THIS METHOD GROUPS VECTORS AND INDICES INTO
         //      NESTED ARRAYS AND FLATTENS THE FINAL ARRAYS BEFORE RETURNING
@@ -352,31 +367,37 @@ class Spacecraft {
 
     /**
      * get an array of *distinct* vertices for a cylinder of given radius,
-     * height, and radial "resolution" (in degrees)
+     * height, and number of edges around the perimeter
+     *
+     * center of bottom face will be positioned at (x, y, z) = (0, 0, 0)
      *
      * many of these vertices will need to be duplicated before passing to WebGL
      * (vertices will be assigned normals based on which face they belong to, so
      * non-coplanar faces cannot share a vertex)
      *
-     * first two vertices are centers of the bottom and top faces, respectively.
-     * remaining vertices ordered with alternating bottom/top vertices (see
-     * diagram below).
+     * first two vertices are centers of the top and bottom faces, respectively.
+     * remaining vertices added in alternating top/bottom order. in this order,
+     * vertices/elements will be drawn ("wound") counterclockwise by
+     * wgl.drawArrays() (or drawElements() if the index buffer is in the
+     * same order). the following diagram illustrates vertex indices (positions
+     * in the array) of successive vertices around the perimeter of the cylinder
+     * (as viewed from the side)
      *
-     * center of bottom face will be positioned at (x, y, z) = (0, 0, 0)
+     *       z
+     *       |
+     *       |
+     *       2--4--6--8
+     *       | /| /| /|
+     *       |/ |/ |/ |
+     *   0 --3--5--7--9--- theta
+     *       |
+     *       0
      *
-     *   2--4--6--8
-     *   | /| /| /|
-     *   |/ |/ |/ |
-     *   1--3--5--7
-     *   |--|
-     *    ^
-     *   inc (degrees)
-     *
-     * returned array will contain 2*inc+2 Vector instances
+     * returned array will contain 2*edges+2 Vector instances
      */
     getDistinctCylinderVertices(r: number, h: number, edges: number = 12): Vector[] {
 
-        //  possibly helpful debugging output
+        //  if either of the following is true it was probably by mistake...
         if(r === 0) {
             console.debug('spacecraft %o being drawn with 0 radius', this);
         }
@@ -384,10 +405,10 @@ class Spacecraft {
             console.debug('spacecraft %o being drawn with 0 height', this);
         }
 
-        //  start with the centers of the bottom (z = 0) and top (z = h) faces
+        //  start with the centers of the top (z = h) and bottom (z = 0) faces
         let vertices: Vector[] = [
-            new Vector(0, 0, 0),
-            new Vector(0, 0, h)
+            new Vector(0, 0, h),
+            new Vector(0, 0, 0)
         ];
 
         //  calculate coordinates of remaining vertices
@@ -399,8 +420,8 @@ class Spacecraft {
             x = r * Math.cos(theta);
             y = r * Math.sin(theta);
 
-            //  push bottom first, then top
-            vertices.push(new Vector(x, y, 0), new Vector(x, y, h));
+            //  push top first, then bottom
+            vertices.push(new Vector(x, y, h), new Vector(x, y, 0));
         }
 
         return vertices;
