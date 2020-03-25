@@ -220,7 +220,7 @@
  * - https://en.wikipedia.org/wiki/Falcon_9_Full_Thrust
  */
 
-import OrbitGame from './OrbitGame.js';
+import {OrbitGame} from './OrbitGame.js';
 import {Spacecraft} from './Spacecraft.js';
 
 let vanguard = new Spacecraft('Vanguard-1C');

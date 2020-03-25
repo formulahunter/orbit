@@ -54,13 +54,7 @@
  * are modified (thrust-to-weight ratio in the GUI, for example).
  */
 import Vector from './kinematics/Vector.js';
-
-/** this interface assumes that vertices are grouped into triplets to
- * compose triangles */
-interface WGLElementData {
-    vertices: number[],
-    indices: number[]
-}
+import {WGLElementData} from './OrbitView.js';
 
 class Spacecraft {
 
