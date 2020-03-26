@@ -6,6 +6,8 @@
  * smaller, more localized domains.
  */
 
+import Spacecraft from './Spacecraft.js';
+
 /** interface for Keplerian elements describing the position/path of a body in
  *  orbit */
 interface KeplerianElements {
@@ -137,6 +139,10 @@ const planets: {readonly [name: string]: KeplerianElements} = {
     }
 };
 
+/** the game's master crafts list contains all spacecraft represented by
+ * the simulation, including the active one */
+const crafts: Spacecraft[] = [];
+
 function sim() {
 
     /** the time at which the current run began (in milliseconds) */
@@ -145,7 +151,7 @@ function sim() {
     /** time elapsed since the previous run (in milliseconds) */
     const dt: number = now - lastRun;
 
-    //  calculate new positions of planets
+    //  calculate new positions of active planet
     //
     //  just need to add n*dt = sqrt(mu/a^3)*dt to m0
     //  https://en.wikipedia.org/wiki/Orbital_elements#Orbit_prediction
@@ -167,4 +173,58 @@ function sim() {
 }
 
 
-export {sim};
+/** get the spacecraft at a given index in the master crafts list
+ *  @throws RangeError - given index argument is out of bounds
+ */
+function getCraft(ind: number = 0): Spacecraft {
+    if(ind > crafts.length || ind < 0) {
+        console.debug(`invalid index ${ind} for accessing spacecraft in`
+            + ` master crafts list %o`, crafts);
+        throw new RangeError(`invalid master craft list index ${ind}`);
+    }
+    return crafts[ind];
+}
+
+/** add a new spacecraft and return the total number of crafts */
+function addCraft(craft: Spacecraft): number {
+    let ind = crafts.indexOf(craft);
+    if(ind >= 0) {
+        console.debug('master crafts list already includes %o - moving it' +
+            ' to the top (end) of the list', craft);
+
+        crafts.splice(ind, 1);
+        return crafts.push(craft);
+    }
+
+    return crafts.push(craft);
+}
+
+/** remove a spacecraft, specified by index or reference, from the master
+ *  crafts list amd return that spacecraft
+ *
+ *  @throws RangeError - numeric index argument is out of bounds or
+ *      Spacecraft reference is not in the master crafts list
+ */
+function removeCraft(craft: Spacecraft | number): Spacecraft {
+    let ind: number;
+    if(craft instanceof Spacecraft) {
+        ind = crafts.indexOf(craft);
+    }
+    else {
+        ind = craft;
+    }
+
+    if(ind > crafts.length || ind < 0) {
+        console.debug(`invalid index ${ind} for removing spacecraft from`
+            + ` master crafts list %o`, crafts);
+        if(craft instanceof Spacecraft) {
+            console.debug(`%o was not found in the master crafts list`, craft);
+        }
+        throw new RangeError(`invalid master craft list index ${ind}`);
+    }
+
+    return crafts.splice(ind, 1)[0];
+}
+
+
+export {sim, getCraft, addCraft, removeCraft};
