@@ -1,9 +1,7 @@
-/** the sim() function is the engine powering the game - it performs
- * calculations to update the physics model, which in turn drives scene
- * rendering and gui layout.
+/** sim function & environment (model data)
  *
- * the model is updated starting with global parameters and progressing to
- * smaller, more localized domains.
+ * the simulation is implemented as a function and not a class in anticipation
+ * of using a ServiceWorker to execute it on a separate thread from the main UI.
  */
 
 import Spacecraft from './Spacecraft.js';
@@ -143,6 +141,14 @@ const planets: {readonly [name: string]: KeplerianElements} = {
  * the simulation, including the active one */
 const crafts: Spacecraft[] = [];
 
+
+/** the sim() function is the engine powering the game - it performs
+ * calculations to update the physics model, which in turn drives scene
+ * rendering and gui layout.
+ *
+ * the model is updated starting with global parameters and progressing to
+ * smaller, more localized domains.
+ */
 function sim() {
 
     /** the time at which the current run began (in milliseconds) */
