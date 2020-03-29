@@ -266,4 +266,4 @@ function removeCraft(craft: Spacecraft | number): Spacecraft {
 }
 
 
-export {sim, getCraft, addCraft, removeCraft};
+export {sim, getCraft, addCraft, removeCraft, getTrueAnomAt, KeplerianElements};

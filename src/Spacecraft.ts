@@ -53,6 +53,7 @@
  * will likely be needed to trigger related changes when their private values
  * are modified (thrust-to-weight ratio in the GUI, for example).
  */
+import {KeplerianElements, getTrueAnomAt} from './sim.js';
 import Vector from './kinematics/Vector.js';
 
 /** this interface assumes that vertices are grouped into triplets to
@@ -95,6 +96,23 @@ class Spacecraft {
      * ***do not assign this property manually***
      */
     private _mass_total: number = -1;
+
+    /** Keplerian elements describing this spacecraft's orbital plane &
+     * trajectory */
+    orbit: KeplerianElements = {
+            sMaj:       8000,
+            e:          0,
+            M0:         0,
+            incl:       0,
+            longAsc:    0,
+            argP:       0,
+            M:          -1,
+            rBar:       4000,
+            mass:       5000,
+            axiTilt:    0,
+            n:          Math.sqrt((6.674 * 10 ** 11) * (5000) / Math.pow(4.50 * 10 ** 12, 3)),
+            gamma:      getTrueAnomAt
+    };
 
     constructor(name: string = 'noname') {
         this._name = name;
