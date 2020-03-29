@@ -6,19 +6,28 @@
 
 import Spacecraft from './Spacecraft.js';
 
+/** function to get/set true anomaly given M0 and time since epoch
+ * defined on KeplerianElements interface below as method 'gamma'
+ */
+function getTrueAnomAt(this: KeplerianElements, timeSinceEpoch: number) {
+    return (this.M0 + this.n * timeSinceEpoch) % (2 * Math.PI);
+}
+
 /** interface for Keplerian elements describing the position/path of a body in
  *  orbit */
 interface KeplerianElements {
     sMaj:       number,     //  semi-major axis (km)
     e:          number,     //  eccentricity (unitless)
-    m0:         number,     //  mean anomaly (degrees, J2000)
-    iota:       number,     //  inclination (deg to J2000 ecliptic)
-    longAsc:    number,     //  long. of the asc. node (deg to J2000 ecliptic)
-    argP:       number,     //  argument of perihelion (deg)
+    M0:         number,     //  mean anomaly at epoch (radians, J2000, 0 <= M0 < 2pi)
+    incl:       number,     //  inclination (rad to J2000 ecliptic, 0 <= incl <= pi)
+    longAsc:    number,     //  long. of the asc. node (rad to J2000 ecliptic, 0 <= longAsc < 2pi)
+    argP:       number,     //  argument of pericenter (rad, 0 <= argP < 2pi)
+    M:          number,     //  current mean anomaly (radians, 0 <= M < 2pi)
     rBar:       number,     //  mean radius (km)
     mass:       number,     //  (kg)
-    axiTilt:    number,     //  axial tilt (deg to orbit)
-    n:          number      //  mean motion (s^-1) (angular speed)
+    axiTilt:    number,     //  axial tilt (rad to orbital plane, 0 <= axiTilt <= pi)
+    n:          number      //  mean motion (s^-1) (angular speed),
+    gamma:      (time: number) => number
 }
 
 /** flag allowing the simulator to be started/stopped by the gui */
@@ -32,108 +41,132 @@ const J2000: Date = Date.UTC(2000, 0, 1, 12, 0, 0, 0);
 
 /** index of 8 planets in our solar system
  *
+ * "For several objects in the Solar System, the value of μ is known to greater
+ * accuracy than either G or M"
+ *  - https://en.wikipedia.org/wiki/Standard_gravitational_parameter
+ *
  * data from summary tables on respective Wikipedia pages:
  * [1] https://en.wikipedia.org/wiki/Solar_System
  *
  * data on moon orbits:
  * https://ssd.jpl.nasa.gov/?sat_elem
- * */
+ *
+ * todo - planets & activePlanet are just object literals that implement the
+ *  KeplerianElements interface. it may be beneficial to formalize the Planet
+ *  definition with a class of its own (at some point)
+ */
 const planets: {readonly [name: string]: KeplerianElements} = {
     mercury: {
         sMaj:       57909050,
         e:          0.205630,
-        m0:         174.796,
-        iota:       7.005,
-        longAsc:    48.311,
-        argP:       29.124,
+        M0:         174.796 * DEG2RAD,
+        incl:       7.005 * DEG2RAD,
+        longAsc:    48.311 * DEG2RAD,
+        argP:       29.124 * DEG2RAD,
+        M:          -1,
         rBar:       2439.7,
         mass:       3.3011 * 10 ** 23,
         axiTilt:    0.034,
-        n:          Math.sqrt((2.2032 * 10 ** 13) / Math.pow(57909050, 3))
+        n:          Math.sqrt((2.2032 * 10 ** 13) / Math.pow(57909050, 3)),
+        gamma:      getTrueAnomAt
     },
     venus: {
         sMaj:       108208000,
         e:          0.006772,
-        m0:         50.115,
-        iota:       3.39458,
-        longAsc:    76.680,
-        argP:       54.884,
+        M0:         50.115 * DEG2RAD,
+        incl:       3.39458 * DEG2RAD,
+        longAsc:    76.680 * DEG2RAD,
+        argP:       54.884 * DEG2RAD,
+        M:          -1,
         rBar:       6051.8,
         mass:       4.8675 * 10 ** 24,
         axiTilt:    177.36,
-        n:          Math.sqrt((3.24859 * 10 ** 14) / Math.pow(108208000, 3))
+        n:          Math.sqrt((3.24859 * 10 ** 14) / Math.pow(108208000, 3)),
+        gamma:      getTrueAnomAt
     },
     earth: {
         sMaj:       149598023,
         e:          0.0167086,
-        m0:         358.617,
-        iota:       0.00005,
-        longAsc:    -11.26064,
-        argP:       114.20783,
+        M0:         358.617 * DEG2RAD,
+        incl:       0.00005 * DEG2RAD,
+        longAsc:    -11.26064 * DEG2RAD,
+        argP:       114.20783 * DEG2RAD,
+        M:          -1,
         rBar:       6371.0,
         mass:       5.97237 * 10 ** 24,
         axiTilt:    23.4392811,
-        n:          Math.sqrt((3.986004418 * 10 ** 14) / Math.pow(149598023, 3))
+        n:          Math.sqrt((3.986004418 * 10 ** 14) / Math.pow(149598023, 3)),
+        gamma:      getTrueAnomAt
     },
     mars: {
         sMaj:       227939200,
         e:          0.0934,
-        m0:         19.412,
-        iota:       1.850,
-        longAsc:    49.558,
-        argP:       286.502,
+        M0:         19.412 * DEG2RAD,
+        incl:       1.850 * DEG2RAD,
+        longAsc:    49.558 * DEG2RAD,
+        argP:       286.502 * DEG2RAD,
+        M:          -1,
         rBar:       3389.5,
         mass:       6.4171 * 10 ** 23,
         axiTilt:    25.19,
-        n:          Math.sqrt((4.282837 * 10 ** 13) / Math.pow(227939200, 3))
+        n:          Math.sqrt((4.282837 * 10 ** 13) / Math.pow(227939200, 3)),
+        gamma:      getTrueAnomAt
     },
     jupiter: {
         sMaj:       778.57 * 10 ** 6,
         e:          0.0489,
-        m0:         20.020,
-        iota:       1.303,
-        longAsc:    100.464,
-        argP:       273.867,
+        M0:         20.020 * DEG2RAD,
+        incl:       1.303 * DEG2RAD,
+        longAsc:    100.464 * DEG2RAD,
+        argP:       273.867 * DEG2RAD,
+        M:          -1,
         rBar:       69911,
         mass:       1.8982 * 10 ** 27,
         axiTilt:    3.13,
-        n: Math.    sqrt((1.26686534 * 10 ** 17) / Math.pow(778.57 * 10 ** 6, 3))
+        n: Math.    sqrt((1.26686534 * 10 ** 17) / Math.pow(778.57 * 10 ** 6, 3)),
+        gamma:      getTrueAnomAt
     },
     saturn: {
         sMaj:       1433.53 * 10 ** 6,
         e:          0.0565,
-        m0:         317.020,
-        iota:       2.485,
-        longAsc:    113.665,
-        argP:       339.392,
+        M0:         317.020 * DEG2RAD,
+        incl:       2.485 * DEG2RAD,
+        longAsc:    113.665 * DEG2RAD,
+        argP:       339.392 * DEG2RAD,
+        M:          -1,
         rBar:       58232,
         mass:       5.6834 * 10 ** 26,
         axiTilt:    26.73,
-        n:          Math.sqrt((3.7931187 * 10 ** 16) / Math.pow(1433.53 * 10 ** 6, 3))
+        n:          Math.sqrt((3.7931187 * 10 ** 16) / Math.pow(1433.53 * 10 ** 6, 3)),
+        gamma:      getTrueAnomAt
     },
     uranus: {
         sMaj:       2875.04 * 10 ** 9,
         e:          0.046381,
-        m0:         142.238600,
-        iota:       0.773,
-        longAsc:    74.006,
-        argP:       96.998857,
+        M0:         142.238600 * DEG2RAD,
+        incl:       0.773 * DEG2RAD,
+        longAsc:    74.006 * DEG2RAD,
+        argP:       96.998857 * DEG2RAD,
+        M:          -1,
         rBar:       25362,
         mass:       8.6810 * 10 ** 25,
         axiTilt:    97.77,
-        n:          Math.sqrt((5.793939 * 10 ** 15) / Math.pow(2875.04 * 10 ** 9, 3))
+        n:          Math.sqrt((5.793939 * 10 ** 15) / Math.pow(2875.04 * 10 ** 9, 3)),
+        gamma:      getTrueAnomAt
     },
     neptune: {
         sMaj:       4.50 * 10 ** 12,
         e:          0.009456,
-        m0:         256.228,
-        iota:       1.767975,
-        longAsc:    131.784,
-        argP:       276.336,
+        M0:         256.228 * DEG2RAD,
+        incl:       1.767975 * DEG2RAD,
+        longAsc:    131.784 * DEG2RAD,
+        argP:       276.336 * DEG2RAD,
+        M:          -1,
         rBar:       24622,
         mass:       1.02413 * 10 ** 23,
         axiTilt:    28.32,
-        n:          Math.sqrt((6.836529 * 10 ** 9) / Math.pow(4.50 * 10 ** 12, 3))
+        n:          Math.sqrt((6.836529 * 10 ** 9) / Math.pow(4.50 * 10 ** 12, 3)),
+        gamma:      getTrueAnomAt
     }
 };
 
@@ -159,7 +192,7 @@ function sim() {
 
     //  calculate new positions of active planet
     //
-    //  just need to add n*dt = sqrt(mu/a^3)*dt to m0
+    //  just need to add n*dt = sqrt(mu/a^3)*dt to M
     //  https://en.wikipedia.org/wiki/Orbital_elements#Orbit_prediction
     //
     //   "For several objects in the Solar System, the value of μ is known to
