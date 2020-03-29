@@ -33,7 +33,7 @@ interface KeplerianElements {
 }
 
 /** flag allowing the simulator to be started/stopped by the gui */
-let queueNextRun: boolean = false;
+let queueNextRun: boolean = true;
 
 /** the time at which the previous run began - used to calculate delta t */
 let lastRun: DOMHighResTimeStamp = 0;
@@ -192,6 +192,10 @@ let activePlanet: KeplerianElements = planets['earth'];
 let activeCraft: Spacecraft;
 
 
+/** sim run counter - for testing only */
+let counter: number = 0;
+
+
 /** the sim() function is the engine powering the game - it performs
  * calculations to update the physics model, which in turn drives scene
  * rendering and gui layout.
@@ -217,17 +221,6 @@ function sim() {
     //  update game time
     gameTime += dgt;
 
-    //  print initial time & positions to the console
-    console.info(`
-    AFTER INITIALIZATION:
-        session time (since "time origin"): ${now}
-        dt since last run: ${dt}
-        change in game time: ${dgt}
-        new game time: ${gameTime}
-        active planet position (M): ${activePlanet.M}
-        active craft position (M): ${activeCraft.orbit.M}
-    `);
-
     //  calculate new position of active planet
     //
     //  just need to add n*dt = sqrt(mu/a^3)*dt to M
@@ -243,7 +236,8 @@ function sim() {
     lastRun = now;
 
     //  wash, rinse, repeat
-    if(queueNextRun) {
+    //  limit to a few runs for testing
+    if(counter < 15 && queueNextRun) {
         //  if setTimeout() itself becomes the primary performance bottleneck
         //  see the note on postMessage() in document comments for a possible
         //  workaround
@@ -252,7 +246,7 @@ function sim() {
 
     //  print resulting time & positions to the console
     console.info(`
-    AFTER SIM RUN:
+    AFTER SIM RUN ${counter}:
         session time (since "time origin"): ${now}
         dt since last run: ${dt}
         change in game time: ${dgt}
@@ -260,6 +254,9 @@ function sim() {
         active planet position (M): ${activePlanet.M}
         active craft position (M): ${activeCraft.orbit.M}
     `);
+
+    //  increment the run counter
+    ++counter;
 }
 
 /** initialize the simulator
