@@ -217,6 +217,17 @@ function sim() {
     //  update game time
     gameTime += dgt;
 
+    //  print initial time & positions to the console
+    console.info(`
+    AFTER INITIALIZATION:
+        session time (since "time origin"): ${now}
+        dt since last run: ${dt}
+        change in game time: ${dgt}
+        new game time: ${gameTime}
+        active planet position (M): ${activePlanet.M}
+        active craft position (M): ${activeCraft.orbit.M}
+    `);
+
     //  calculate new position of active planet
     //
     //  just need to add n*dt = sqrt(mu/a^3)*dt to M
@@ -238,6 +249,17 @@ function sim() {
         //  workaround
         window.setTimeout(sim);
     }
+
+    //  print resulting time & positions to the console
+    console.info(`
+    AFTER SIM RUN:
+        session time (since "time origin"): ${now}
+        dt since last run: ${dt}
+        change in game time: ${dgt}
+        new game time: ${gameTime}
+        active planet position (M): ${activePlanet.M}
+        active craft position (M): ${activeCraft.orbit.M}
+    `);
 }
 
 /** initialize the simulator
@@ -323,4 +345,4 @@ function removeCraft(craft: Spacecraft | number): Spacecraft {
 }
 
 
-export {sim, getCraft, addCraft, removeCraft, getTrueAnomAt, KeplerianElements};
+export {sim, initSim, getCraft, addCraft, removeCraft, getTrueAnomAt, KeplerianElements};

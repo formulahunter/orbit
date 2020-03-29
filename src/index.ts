@@ -162,16 +162,8 @@
  */
 
 import OrbitGame from './OrbitGame.js';
-import Spacecraft from './Spacecraft.js';
-// import CoordinateSystem from './kinematics/CoordinateSystem.js';
-// @ts-ignore
-// import Vector from './kinematics/Vector.js';
-// import Angle from './kinematics/Angle.js';
 
 //@ts-ignore
 let game = new OrbitGame();
-let vanguard = new Spacecraft('Vanguard-1C');
-vanguard.height = 10;
-vanguard.radius = 1;
-console.debug(vanguard.getElements());
+game.init();
 
