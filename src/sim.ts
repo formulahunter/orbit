@@ -268,6 +268,14 @@ function sim() {
  */
 function initSim(): void {
 
+    //  set lastRun to now because initial orbit positions will be calculated
+    //  based on current time
+    lastRun = performance.now();
+
+    //  set game time to now
+    //  revisit - set this using player data once implemented
+    gameTime = Date.now();
+
     //  initialize M for planets & spacecraft
     for(let planet in planets) {
         planets[planet].M = (planets[planet].M0 * (gameTime - J2000)) % TWO_PI;
