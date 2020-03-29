@@ -184,20 +184,12 @@ const planets: {readonly [name: string]: KeplerianElements} = {
  * the simulation, including the active one */
 const crafts: Spacecraft[] = [];
 
-//  initialize M for planets & spacecraft
-for(let planet in planets) {
-    planets[planet].M = (planets[planet].M0 * (gameTime - J2000)) % TWO_PI;
-}
-for(let craft of crafts) {
-    craft.orbit.M = (craft.orbit.M0 * gameTime) % TWO_PI;
-}
-
 /** the central body around which the active spacecraft is orbiting */
 let activePlanet: KeplerianElements = planets['earth'];
 
 /** the active spacecraft, i.e. the one being actively controlled by the
  *  player */
-let activeCraft: Spacecraft = getCraft();
+let activeCraft: Spacecraft;
 
 
 /** the sim() function is the engine powering the game - it performs
@@ -248,6 +240,27 @@ function sim() {
     }
 }
 
+/** initialize the simulator
+ * this needs to happen in a function because some resources won't be available
+ * when this script is first loaded/parsed
+ */
+function initSim(): void {
+
+    //  initialize M for planets & spacecraft
+    for(let planet in planets) {
+        planets[planet].M = (planets[planet].M0 * (gameTime - J2000)) % TWO_PI;
+    }
+    for(let craft of crafts) {
+        craft.orbit.M = (craft.orbit.M0 * gameTime) % TWO_PI;
+    }
+
+    activeCraft = getCraft();
+    if(activeCraft === undefined) {
+        console.debug('sim is being initialized with no spacecraft defined');
+        throw new TypeError('active craft undefined');
+    }
+}
+
 
 /** get the spacecraft at a given index in the master crafts list
  *  @throws RangeError - given index argument is out of bounds
@@ -270,6 +283,13 @@ function addCraft(craft: Spacecraft): number {
 
         crafts.splice(ind, 1);
         return crafts.push(craft);
+    }
+
+    //  fixme - this is a temp hack-ey fix for testing purposes. need to think
+    //      about what to do if activeCraft is undefined and/or make sure it
+    //      never is
+    if(activeCraft === undefined) {
+        activeCraft = craft;
     }
 
     return crafts.push(craft);
