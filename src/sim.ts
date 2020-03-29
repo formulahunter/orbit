@@ -37,7 +37,15 @@ let queueNextRun: boolean = false;
 let lastRun: DOMHighResTimeStamp = 0;
 
 /** reference time (or "epoch") for the J2000 reference frame */
-const J2000: Date = Date.UTC(2000, 0, 1, 12, 0, 0, 0);
+const J2000: number = Date.UTC(2000, 0, 1, 12, 0, 0, 0);
+
+/** game clock time wrt epoch
+ * revisit - save with player data and load at init to be used in sim
+ */
+let gameTime: number = /*player.gameTime*/ 0;
+
+/** speed at which simulator is running */
+let simSpeed: number = 1;
 
 /** index of 8 planets in our solar system
  *
@@ -59,10 +67,10 @@ const planets: {readonly [name: string]: KeplerianElements} = {
     mercury: {
         sMaj:       57909050,
         e:          0.205630,
-        M0:         174.796 * DEG2RAD,
-        incl:       7.005 * DEG2RAD,
-        longAsc:    48.311 * DEG2RAD,
-        argP:       29.124 * DEG2RAD,
+        M0:         174.796 * Math.PI / 180,
+        incl:       7.005 * Math.PI / 180,
+        longAsc:    48.311 * Math.PI / 180,
+        argP:       29.124 * Math.PI / 180,
         M:          -1,
         rBar:       2439.7,
         mass:       3.3011 * 10 ** 23,
@@ -73,10 +81,10 @@ const planets: {readonly [name: string]: KeplerianElements} = {
     venus: {
         sMaj:       108208000,
         e:          0.006772,
-        M0:         50.115 * DEG2RAD,
-        incl:       3.39458 * DEG2RAD,
-        longAsc:    76.680 * DEG2RAD,
-        argP:       54.884 * DEG2RAD,
+        M0:         50.115 * Math.PI / 180,
+        incl:       3.39458 * Math.PI / 180,
+        longAsc:    76.680 * Math.PI / 180,
+        argP:       54.884 * Math.PI / 180,
         M:          -1,
         rBar:       6051.8,
         mass:       4.8675 * 10 ** 24,
@@ -87,10 +95,10 @@ const planets: {readonly [name: string]: KeplerianElements} = {
     earth: {
         sMaj:       149598023,
         e:          0.0167086,
-        M0:         358.617 * DEG2RAD,
-        incl:       0.00005 * DEG2RAD,
-        longAsc:    -11.26064 * DEG2RAD,
-        argP:       114.20783 * DEG2RAD,
+        M0:         358.617 * Math.PI / 180,
+        incl:       0.00005 * Math.PI / 180,
+        longAsc:    -11.26064 * Math.PI / 180,
+        argP:       114.20783 * Math.PI / 180,
         M:          -1,
         rBar:       6371.0,
         mass:       5.97237 * 10 ** 24,
@@ -101,10 +109,10 @@ const planets: {readonly [name: string]: KeplerianElements} = {
     mars: {
         sMaj:       227939200,
         e:          0.0934,
-        M0:         19.412 * DEG2RAD,
-        incl:       1.850 * DEG2RAD,
-        longAsc:    49.558 * DEG2RAD,
-        argP:       286.502 * DEG2RAD,
+        M0:         19.412 * Math.PI / 180,
+        incl:       1.850 * Math.PI / 180,
+        longAsc:    49.558 * Math.PI / 180,
+        argP:       286.502 * Math.PI / 180,
         M:          -1,
         rBar:       3389.5,
         mass:       6.4171 * 10 ** 23,
@@ -115,10 +123,10 @@ const planets: {readonly [name: string]: KeplerianElements} = {
     jupiter: {
         sMaj:       778.57 * 10 ** 6,
         e:          0.0489,
-        M0:         20.020 * DEG2RAD,
-        incl:       1.303 * DEG2RAD,
-        longAsc:    100.464 * DEG2RAD,
-        argP:       273.867 * DEG2RAD,
+        M0:         20.020 * Math.PI / 180,
+        incl:       1.303 * Math.PI / 180,
+        longAsc:    100.464 * Math.PI / 180,
+        argP:       273.867 * Math.PI / 180,
         M:          -1,
         rBar:       69911,
         mass:       1.8982 * 10 ** 27,
@@ -129,10 +137,10 @@ const planets: {readonly [name: string]: KeplerianElements} = {
     saturn: {
         sMaj:       1433.53 * 10 ** 6,
         e:          0.0565,
-        M0:         317.020 * DEG2RAD,
-        incl:       2.485 * DEG2RAD,
-        longAsc:    113.665 * DEG2RAD,
-        argP:       339.392 * DEG2RAD,
+        M0:         317.020 * Math.PI / 180,
+        incl:       2.485 * Math.PI / 180,
+        longAsc:    113.665 * Math.PI / 180,
+        argP:       339.392 * Math.PI / 180,
         M:          -1,
         rBar:       58232,
         mass:       5.6834 * 10 ** 26,
@@ -143,10 +151,10 @@ const planets: {readonly [name: string]: KeplerianElements} = {
     uranus: {
         sMaj:       2875.04 * 10 ** 9,
         e:          0.046381,
-        M0:         142.238600 * DEG2RAD,
-        incl:       0.773 * DEG2RAD,
-        longAsc:    74.006 * DEG2RAD,
-        argP:       96.998857 * DEG2RAD,
+        M0:         142.238600 * Math.PI / 180,
+        incl:       0.773 * Math.PI / 180,
+        longAsc:    74.006 * Math.PI / 180,
+        argP:       96.998857 * Math.PI / 180,
         M:          -1,
         rBar:       25362,
         mass:       8.6810 * 10 ** 25,
@@ -157,10 +165,10 @@ const planets: {readonly [name: string]: KeplerianElements} = {
     neptune: {
         sMaj:       4.50 * 10 ** 12,
         e:          0.009456,
-        M0:         256.228 * DEG2RAD,
-        incl:       1.767975 * DEG2RAD,
-        longAsc:    131.784 * DEG2RAD,
-        argP:       276.336 * DEG2RAD,
+        M0:         256.228 * Math.PI / 180,
+        incl:       1.767975 * Math.PI / 180,
+        longAsc:    131.784 * Math.PI / 180,
+        argP:       276.336 * Math.PI / 180,
         M:          -1,
         rBar:       24622,
         mass:       1.02413 * 10 ** 23,
@@ -173,6 +181,21 @@ const planets: {readonly [name: string]: KeplerianElements} = {
 /** the game's master crafts list contains all spacecraft represented by
  * the simulation, including the active one */
 const crafts: Spacecraft[] = [];
+
+//  initialize M for planets & spacecraft
+for(let planet in planets) {
+    planets[planet].M = (planets[planet].M0 * (gameTime - J2000)) % (2 * Math.PI);
+}
+for(let craft of crafts) {
+    craft.orbit.M = (craft.orbit.M0 * gameTime) % (2 * Math.PI);
+}
+
+/** the central body around which the active spacecraft is orbiting */
+let activePlanet: KeplerianElements = planets['earth'];
+
+/** the active spacecraft, i.e. the one being actively controlled by the
+ *  player */
+let activeCraft: Spacecraft = getCraft();
 
 
 /** the sim() function is the engine powering the game - it performs
