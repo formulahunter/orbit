@@ -204,6 +204,10 @@ let activeCraft: Spacecraft = getCraft();
  *
  * the model is updated starting with global parameters and progressing to
  * smaller, more localized domains.
+ *
+ * the simulation is "paused" between sessions: planet/spacecraft positions are
+ * update wrt epoch time, which is reflected in the 'gameTime' player data
+ * property (loaded at init & updated with each sim run)
  */
 function sim() {
 
@@ -213,14 +217,22 @@ function sim() {
     /** time elapsed since the previous run (in milliseconds) */
     const dt: number = now - lastRun;
 
-    //  calculate new positions of active planet
+    /** change in game time */
+    const dgt: number = dt * simSpeed;
+
+    //  update game time
+    gameTime += dgt;
+
+    //  calculate new position of active planet
     //
     //  just need to add n*dt = sqrt(mu/a^3)*dt to M
     //  https://en.wikipedia.org/wiki/Orbital_elements#Orbit_prediction
-    //
-    //   "For several objects in the Solar System, the value of μ is known to
-    //   greater accuracy than either G or M"
-    //    - https://en.wikipedia.org/wiki/Standard_gravitational_parameter
+    activePlanet.M += activePlanet.n * dgt;
+
+    //  calculate new position of active craft
+    //  revisit - need a distinct calculation if thrust is being applied (i.e.
+    //   throttle != 0)
+    activeCraft.orbit.M += activeCraft.orbit.n * dgt;
 
     //  update time of last run
     lastRun = now;
