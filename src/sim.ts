@@ -228,9 +228,27 @@ function sim() {
     activePlanet.M += activePlanet.n * dgt;
 
     //  calculate new position of active craft
+    //  neglect all forces but gravity
     //  revisit - need a distinct calculation if thrust is being applied (i.e.
-    //   throttle != 0)
+    //   throttle != 0) not to mention if craft is grounded (i.e. before launch)
     activeCraft.orbit.M += activeCraft.orbit.n * dgt;
+
+    /*//  now account for additional forces as appropriate
+    if(thrustApplied) {
+
+    }
+    if(atmosphericDrag) {
+
+    }
+    //  include a JGM or similar geodetic model
+    getLocalGravity();
+    //  calculate the ratios of gravitational influence from nearby bodies
+    //  if these ratios are fixed, calculate in advance
+    if(proximalThirdBody) {
+        //  consider always accounting for the sun by default
+    }*/
+
+
 
     //  update time of last run
     lastRun = now;
