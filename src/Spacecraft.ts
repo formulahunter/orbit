@@ -120,8 +120,8 @@ class Spacecraft {
 
     constructor(name: string = 'noname') {
         this._name = name;
-        this.addComponent(new SpacecraftComponent());
-        console.log('cylinder elements: %o', this.getComponent().getElements(<Cylinder>{name: 'cylinder', r: 2, h: 6}));
+        this.addComponent(new Cylinder(6, 2));
+        console.log('cylinder elements: %o', this.getComponent().getElements());
         console.log('removed component: %o', this.removeComponent(0));
     }
 
@@ -318,7 +318,7 @@ class Spacecraft {
 }
 
 
-class SpacecraftComponent {
+abstract class SpacecraftComponent {
 
     /** total mass of the component */
     protected _mass: number = 0;
@@ -383,18 +383,66 @@ class SpacecraftComponent {
     }
 
     /** get a vertex array and corresponding element array */
-    getElements(shape: Primitive3D): WGLElementData  {
-        // this hack-y implementation is temporary
+    abstract getElements(): WGLElementData;
 
-        if(shape.name === 'cylinder') {
-            //  assert shape as a Cylinder to make TS happy
-            return this.getCylinderElements((shape as Cylinder).r, (shape as Cylinder).h);
-        }
+    /** get an array of coordinates of all *distinct* vertices */
+    abstract getDistinctVertices(): Vector[];
+}
 
-        return {
-            vertices: [],
-            elements: []
-        };
+
+/** a cylinder is defined by a height and two separate radii - the first for the
+ * bottom surface and the second for the top. the second is optional and is
+ * equal to the first by default.
+ *
+ * cylinders define their own "local" reference frames such that the center
+ * of the "bottom" face coincides with the origin, and their length extends in
+ * the positive z (vertical) direction.
+ */
+class Cylinder extends SpacecraftComponent {
+
+    /** length in the (local) z direction */
+    private _dz: number;
+
+    /** radius of the bottom surface */
+    private _r0: number;
+
+    /** radius of the top surface */
+    private _r1: number;
+
+    /** construct a cylinder with given height, primary radius and optional
+     * secondary radius (equal to the primary radius by default) */
+    constructor(dz: number, r0: number, r1: number = r0) {
+        super();
+        this._dz = dz;
+        this._r0 = r0;
+        this._r1 = r1;
+
+        //  todo - need to assign _verts
+    }
+
+    /** get the height/length of this cylinder */
+    get dz(): number {
+        return this._dz;
+    }
+
+    /** get the primary radius of this cylinder */
+    get r0(): number {
+        return this._r0;
+    }
+
+    /** get the secondary radius of this cylinder */
+    get r1(): number {
+        return this._r1;
+    }
+
+    /** get a vertex array and corresponding element array */
+    getElements(): WGLElementData {
+        return this.getCylinderElements(this.r0, this.dz);
+    }
+
+    /** get an array of coordinates of all *distinct* vertices */
+    getDistinctVertices(): Vector[] {
+        return this.getDistinctCylinderVertices(this.r0, this.dz);
     }
 
     /** get an array of *all* vertices and corresponding element array for a
@@ -529,18 +577,6 @@ class SpacecraftComponent {
         };
     }
 
-    /** get an array of coordinates of all *distinct* vertices */
-    getDistinctVertices(shape: Primitive3D): Vector[] {
-        // this hack-y implementation is temporary
-
-        if(shape.name === 'cylinder') {
-            //  assert shape as a Cylinder to make TS happy
-            return this.getDistinctCylinderVertices((shape as Cylinder).r, (shape as Cylinder).h);
-        }
-
-        return[];
-    }
-
     /**
      * get an array of *distinct* vertices for a cylinder of given radius,
      * height, and radial "resolution" (in degrees)
@@ -596,16 +632,6 @@ class SpacecraftComponent {
 
         return vertices;
     }
-}
-
-interface Primitive3D {
-    name: string
-}
-
-interface Cylinder extends Primitive3D {
-    name: 'cylinder',
-    r: number,
-    h: number
 }
 
 
