@@ -6,7 +6,19 @@
  */
 import Angle from './Angle.js';
 
-class Vector {
+interface Cartesian3D {
+    x: number,
+    y: number,
+    z: number
+}
+
+interface Spherical3D {
+    theta: number | Angle,
+    phi: number | Angle,
+    r: number
+}
+
+class Vector implements Cartesian3D, Spherical3D {
 
     private _x: number | null = null;
     private _y: number | null = null;
@@ -327,4 +339,4 @@ class Vector {
 }
 
 
-export default Vector;
+export {Cartesian3D, Spherical3D, Vector};

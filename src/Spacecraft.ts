@@ -54,7 +54,7 @@
  * are modified (thrust-to-weight ratio in the GUI, for example).
  */
 import {KeplerianElements, getTrueAnomAt} from './sim.js';
-import Vector from './kinematics/Vector.js';
+import {Vector} from './kinematics/geometry/Vector.js';
 
 /** this interface assumes that vertices are grouped into triplets to
  * compose triangles */
