@@ -263,15 +263,15 @@ function sim() {
     }
 
     //  print resulting time & positions to the console
-    console.info(`
-    AFTER SIM RUN ${counter}:
-        session time (since "time origin"): ${now}
-        dt since last run: ${dt}
-        change in game time: ${dgt}
-        new game time: ${gameTime}
-        active planet position (M): ${activePlanet.M}
-        active craft position (M): ${activeCraft.orbit.M}
-    `);
+    // console.info(`
+    // AFTER SIM RUN ${counter}:
+    //     session time (since "time origin"): ${now}
+    //     dt since last run: ${dt}
+    //     change in game time: ${dgt}
+    //     new game time: ${gameTime}
+    //     active planet position (M): ${activePlanet.M}
+    //     active craft position (M): ${activeCraft.orbit.M}
+    // `);
 
     //  increment the run counter
     ++counter;
@@ -307,8 +307,9 @@ function initSim(): void {
 }
 
 
-/** get the spacecraft at a given index in the master crafts list
- *  @throws RangeError - given index argument is out of bounds
+/** get the spacecraft at a given index in the master crafts list (defaults to
+ * first spacecraft in list)
+ * @throws RangeError - given index argument is out of bounds
  */
 function getCraft(ind: number = 0): Spacecraft {
     if(ind > crafts.length || ind < 0) {
@@ -341,7 +342,7 @@ function addCraft(craft: Spacecraft): number {
 }
 
 /** remove a spacecraft, specified by index or reference, from the master
- *  crafts list amd return that spacecraft
+ *  crafts list and return that spacecraft
  *
  *  @throws RangeError - numeric index argument is out of bounds or
  *      Spacecraft reference is not in the master crafts list
@@ -355,7 +356,7 @@ function removeCraft(craft: Spacecraft | number): Spacecraft {
         ind = craft;
     }
 
-    if(ind > crafts.length || ind < 0) {
+    if(ind >= crafts.length || ind < 0) {
         console.debug(`invalid index ${ind} for removing spacecraft from`
             + ` master crafts list %o`, crafts);
         if(craft instanceof Spacecraft) {

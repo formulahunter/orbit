@@ -79,6 +79,10 @@ class Spacecraft {
      * frame) */
     private _vel: Vector = new Vector(0, 0, 0);
 
+    /** primitive 3D geometric components making up the form of the
+     * spacecraft */
+    private _components: SpacecraftComponent[] = [];
+
     /** maximum thrust at standard atmosphere temp/pressure */
     private _thrust_surface: number = 0;
     /** maximum thrust in a vacuum */
@@ -116,6 +120,9 @@ class Spacecraft {
 
     constructor(name: string = 'noname') {
         this._name = name;
+        this.addComponent(new SpacecraftComponent());
+        console.log('cylinder elements: %o', this.getComponent().getElements(<Cylinder>{name: 'cylinder', r: 2, h: 6}));
+        console.log('removed component: %o', this.removeComponent(0));
     }
 
     get name(): string {
@@ -160,6 +167,61 @@ class Spacecraft {
      *  body's inertial frame */
     set vel(value: Vector) {
         this._vel = value;
+    }
+
+    /** get the component at a given index in the components list (defaults to
+     * first component in list)
+     *
+     * @throws RangeError - given index argument is out of bounds
+     */
+    getComponent(ind: number = 0): SpacecraftComponent {
+        if(ind > this._components.length || ind < 0) {
+            console.debug(`invalid index ${ind} for accessing component in`
+                + ` spacecraft %o`, this);
+            throw new RangeError(`invalid spacecraft component index ${ind}`);
+        }
+        return this._components[ind];
+    }
+
+    /** add the given component to this spacecraft's construction and return
+     * the total number of components. if the component already exists in this
+     * spacecraft, move it to the end (top) of the list */
+    addComponent(comp: SpacecraftComponent): number {
+
+        let ind: number = this._components.indexOf(comp);
+        if(ind < 0) {
+            this._components.splice(ind, 1);
+        }
+
+        return this._components.push(comp);
+    }
+
+    /** remove a component, specified by index or reference, from the spacecraft
+     *  and return that component
+     *
+     *  @throws RangeError - numeric index argument is out of bounds or
+     *      Spacecraft reference is not in the master crafts list
+     */
+    removeComponent(comp: SpacecraftComponent | number) {
+
+        let ind: number;
+        if(comp instanceof SpacecraftComponent) {
+            ind = this._components.indexOf(comp);
+        }
+        else {
+            ind = comp;
+        }
+
+        if(ind > this._components.length || ind < 0) {
+            console.debug(`invalid index ${ind} for removing component from`
+                + ` spacecraft %o`, this);
+            if(comp instanceof SpacecraftComponent) {
+                console.debug(`%o was not found in the components list`, comp);
+            }
+            throw new RangeError(`invalid spacecraft component index ${ind}`);
+        }
+
+        return this._components.splice(ind, 1)[0];
     }
 
     /** get the max thrust at standard temp & pressure */
@@ -253,12 +315,86 @@ class Spacecraft {
         this._mass_payload = payload;
         this._mass_total = -1;
     }
+}
+
+
+class SpacecraftComponent {
+
+    /** total mass of the component */
+    protected _mass: number = 0;
+
+    /** location of component's center of mass wrt its own reference frame */
+    protected _com: Vector = new Vector;
+
+    /** the position of the component wrt the spacecraft's reference frame -
+     * given in terms of a designated vertex determined by shape (subclass) */
+    protected _pos: Vector = new Vector;
+
+    /** the velocity of the component wrt the spacecraft's net velocity */
+    protected _vel: Vector = new Vector;
+
+    /** an array of vertices forming the 3d shape of the component */
+    protected _verts: Vector[] = [];
+
+    /** get this component's mass */
+    get mass(): number {
+        return this._mass;
+    }
+
+    /** get the component's position vector wrt the spacecraft's reference
+     * frame */
+    get pos(): Vector {
+        return Vector.copy(this._pos);
+    }
+
+    /** get the component's velocity vector wrt the spacecraft's velocity
+     * vector
+     *
+     * revisit - make sure the physics work out with this definition
+     */
+    get vel(): Vector {
+        return Vector.copy(this._vel);
+    }
+
+    /** get the component's angular velocity wrt that of the spacecraft
+     *
+     * revisit - implement (probably need to do so for the spacecraft first (?))
+     * revisit - make sure the physics work out with this definition
+     */
+    get angularVel(): Vector {
+        return new Vector();
+    }
+
+    /** get linear momentum of this individual component
+     *
+     * revisit - contingent upon validity of velocity vector definition
+     */
+    get momentum(): Vector {
+        return Vector.copy(this.vel).scale(this.mass);
+    }
+
+    /** get angular momentum of this individual component
+     *
+     * revisit - implement (probably need to do so for the spacecraft first (?))
+     * revisit - contingent upon validity of angular velocity vector
+     */
+    get angularMomentum(): Vector {
+        return new Vector();
+    }
 
     /** get a vertex array and corresponding element array */
-    getElements(): WGLElementData {
+    getElements(shape: Primitive3D): WGLElementData  {
+        // this hack-y implementation is temporary
 
-        //  for now the spacecraft is a cylinder
-        return this.getCylinderElements(this.radius, this.height);
+        if(shape.name === 'cylinder') {
+            //  assert shape as a Cylinder to make TS happy
+            return this.getCylinderElements((shape as Cylinder).r, (shape as Cylinder).h);
+        }
+
+        return {
+            vertices: [],
+            elements: []
+        };
     }
 
     /** get an array of *all* vertices and corresponding element array for a
@@ -394,8 +530,15 @@ class Spacecraft {
     }
 
     /** get an array of coordinates of all *distinct* vertices */
-    getDistinctVertices(): Vector[] {
-        return this.getDistinctCylinderVertices(this.radius, this.height);
+    getDistinctVertices(shape: Primitive3D): Vector[] {
+        // this hack-y implementation is temporary
+
+        if(shape.name === 'cylinder') {
+            //  assert shape as a Cylinder to make TS happy
+            return this.getDistinctCylinderVertices((shape as Cylinder).r, (shape as Cylinder).h);
+        }
+
+        return[];
     }
 
     /**
@@ -453,6 +596,16 @@ class Spacecraft {
 
         return vertices;
     }
+}
+
+interface Primitive3D {
+    name: string
+}
+
+interface Cylinder extends Primitive3D {
+    name: 'cylinder',
+    r: number,
+    h: number
 }
 
 

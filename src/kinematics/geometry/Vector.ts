@@ -318,6 +318,16 @@ class Vector implements Cartesian3D, Spherical3D {
         return [this.x, this.y, this.z, 1];
     }
 
+    /** get a new vector with components equal to this vector's components
+     * multiplied by the given factor(s) */
+    scale(s: number | [number, number, number]): Vector {
+
+        if(Array.isArray(s)) {
+            return new Vector(this.x * s[0], this.y * s[1], this.z * s[2]);
+        }
+        return new Vector(this.x * s, this.y * s, this.z * s);
+    }
+
     /** get a string representing this instance's "class" and Cartesian
      *  component values */
     toString() {
