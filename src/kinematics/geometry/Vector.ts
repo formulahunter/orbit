@@ -318,6 +318,11 @@ class Vector implements Cartesian3D, Spherical3D {
         return [this.x, this.y, this.z, 1];
     }
 
+    /** get this vector's "magnitude" as the RSS of its components */
+    get magnitude(): number {
+        return Math.sqrt(this.x**2 + this.y**2 + this.z**2);
+    }
+
     /** get a new vector with components equal to this vector's components
      * multiplied by the given factor(s) */
     scale(s: number | [number, number, number]): Vector {
@@ -326,6 +331,11 @@ class Vector implements Cartesian3D, Spherical3D {
             return new Vector(this.x * s[0], this.y * s[1], this.z * s[2]);
         }
         return new Vector(this.x * s, this.y * s, this.z * s);
+    }
+
+    /** get a new vector with components equal to this vector's components */
+    copy() : Vector {
+        return new Vector(this.x, this.y, this.z);
     }
 
     /** get a string representing this instance's "class" and Cartesian

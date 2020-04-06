@@ -53,8 +53,9 @@
  * will likely be needed to trigger related changes when their private values
  * are modified (thrust-to-weight ratio in the GUI, for example).
  */
-import {KeplerianElements, getTrueAnomAt} from './sim.js';
+import {getTrueAnomAt, KeplerianElements} from './sim.js';
 import {Vector} from './kinematics/geometry/Vector.js';
+import {TWO_PI} from './constants.js';
 
 /** this interface assumes that vertices are grouped into triplets to
  * compose triangles */
@@ -121,7 +122,7 @@ class Spacecraft {
     constructor(name: string = 'noname') {
         this._name = name;
         this.addComponent(new Cylinder(6, 2));
-        console.log('cylinder elements: %o', this.getComponent().getElements());
+        console.log('cylinder elements: %o', this.getComponent().elements);
         console.log('removed component: %o', this.removeComponent(0));
     }
 
@@ -333,9 +334,6 @@ abstract class SpacecraftComponent {
     /** the velocity of the component wrt the spacecraft's net velocity */
     protected _vel: Vector = new Vector;
 
-    /** an array of vertices forming the 3d shape of the component */
-    protected _verts: Vector[] = [];
-
     /** get this component's mass */
     get mass(): number {
         return this._mass;
@@ -382,11 +380,24 @@ abstract class SpacecraftComponent {
         return new Vector();
     }
 
-    /** get a vertex array and corresponding element array */
-    abstract getElements(): WGLElementData;
+    /** get an array of geometric vertices as vectors */
+    abstract get vectorArray(): Vector[];
 
-    /** get an array of coordinates of all *distinct* vertices */
-    abstract getDistinctVertices(): Vector[];
+    /** get a vertex array and corresponding element array */
+    abstract get elements(): WGLElementData;
+}
+
+
+/** interface organizing vertices based on how they're used in calculations */
+interface CylinderVerts {
+    btm: {
+        cntr: Vector,
+        prmtr: Vector[]
+    },
+    top: {
+        cntr: Vector,
+        prmtr: Vector[]
+    }
 }
 
 
@@ -409,6 +420,56 @@ class Cylinder extends SpacecraftComponent {
     /** radius of the top surface */
     private _r1: number;
 
+    /** vertices forming the shape of this cylinder instance */
+    private _verts: Vector[];
+
+    /** number of edges used to represent a circular perimeter */
+    static readonly edgeCount: number = 12;
+
+    /** coordinates of all vertices for a cylinder with dz = r0 = r1 = 1;
+     * vertices for an arbitrary instance can be found by scaling, translating,
+     * and rotating these as appropriate
+     *
+     * note the order of vertices - bottom center, top center, bottom
+     * perimeter, top perimeter
+     */
+    static readonly unitVerts: CylinderVerts = {
+        btm: {
+            cntr: new Vector(0, 0, 0),
+            //  create an empty array of the required number of vertices and map
+            //  to angles by dividing index / edgeCount
+            prmtr: (new Array(Cylinder.edgeCount)).fill(0).map(
+                //  underscore prefix tells TS to ignore unused parameter
+                (_el, ind) => {
+                    return [
+                        Math.cos(ind * TWO_PI / Cylinder.edgeCount),
+                        Math.sin(ind * TWO_PI / Cylinder.edgeCount),
+                        0   //  bottom surface
+                    ];
+                }
+            ).map(vert => {
+                return new Vector(vert[0], vert[1], vert[2])
+            })
+        },
+        top: {
+            //  create an empty array of the required number of vertices and map
+            //  to angles by dividing index / edgeCount
+            cntr: new Vector(0, 0, 1),
+            prmtr: (new Array(Cylinder.edgeCount)).fill(0).map(
+                //  underscore prefix tells TS to ignore unused parameter
+                (_el, ind) => {
+                    return [
+                        Math.cos(ind * TWO_PI / Cylinder.edgeCount),
+                        Math.sin(ind * TWO_PI / Cylinder.edgeCount),
+                        1   //  top surface
+                    ];
+                }
+            ).map(vert => {
+                return new Vector(vert[0], vert[1], vert[2])
+            })
+        }
+    };
+
     /** construct a cylinder with given height, primary radius and optional
      * secondary radius (equal to the primary radius by default) */
     constructor(dz: number, r0: number, r1: number = r0) {
@@ -416,8 +477,40 @@ class Cylinder extends SpacecraftComponent {
         this._dz = dz;
         this._r0 = r0;
         this._r1 = r1;
+        this._verts = Cylinder.getVectors(dz, r0, r1);
+    }
 
-        //  todo - need to assign _verts
+    /**
+     * get an array of *distinct* vertices for a cylinder of given height,
+     * primary radius, and secondary radius
+     *
+     * many of these vertices will need to be duplicated before passing to WebGL
+     * (vertices will be assigned normals based on which face they belong to, so
+     * non-coplanar faces cannot share a vertex)
+     *
+     * first two vertices are centers of the bottom and top faces, respectively.
+     * remaining vertices ordered with alternating bottom/top vertices (see
+     * diagram below).
+     *
+     * center of bottom face will be positioned at (x, y, z) = (0, 0, 0)
+     *
+     *   2--4--6--8
+     *   | /| /| /|
+     *   |/ |/ |/ |
+     *   1--3--5--7
+     *   |--|
+     *    ^
+     *   inc (degrees)
+     *
+     * returned array will contain 2*inc+2 Vector instances
+     */
+    static getVectors(dz: number, r0: number, r1: number): Vector[] {
+        return [
+            Cylinder.unitVerts.btm.cntr.copy(),
+            ...Cylinder.unitVerts.btm.prmtr.map(vert => vert.scale(r0)),
+            Cylinder.unitVerts.top.cntr.scale(dz),
+            ...Cylinder.unitVerts.top.prmtr.map(vert => vert.scale([r1, r1, dz]))
+        ];
     }
 
     /** get the height/length of this cylinder */
@@ -435,14 +528,9 @@ class Cylinder extends SpacecraftComponent {
         return this._r1;
     }
 
-    /** get a vertex array and corresponding element array */
-    getElements(): WGLElementData {
-        return this.getCylinderElements(this.r0, this.dz);
-    }
-
-    /** get an array of coordinates of all *distinct* vertices */
-    getDistinctVertices(): Vector[] {
-        return this.getDistinctCylinderVertices(this.r0, this.dz);
+    /** get an array of vertices forming the shape of this cylinder */
+    get vectorArray(): Vector[] {
+        return this._verts.map(Vector.copy);
     }
 
     /** get an array of *all* vertices and corresponding element array for a
@@ -464,10 +552,10 @@ class Cylinder extends SpacecraftComponent {
      * in total the returned object will contain (2+4+2)*n+2 Vector instances
      * where n is the number of edges: n = 360 / inc
      */
-    getCylinderElements(r: number, h: number, inc: number = 30): WGLElementData {
+    get elements(): WGLElementData {
 
         //  get a list of vertices
-        let vertices: Vector[] = this.getDistinctCylinderVertices(r, h, inc);
+        let vertices: Vector[] = this.vectorArray;
 
 
         /*
@@ -575,62 +663,6 @@ class Cylinder extends SpacecraftComponent {
             vertices: finalVerts.map(v => v.valueOf()).flat(),
             elements: bottom.concat(sides).concat(top).flat()
         };
-    }
-
-    /**
-     * get an array of *distinct* vertices for a cylinder of given radius,
-     * height, and radial "resolution" (in degrees)
-     *
-     * many of these vertices will need to be duplicated before passing to WebGL
-     * (vertices will be assigned normals based on which face they belong to, so
-     * non-coplanar faces cannot share a vertex)
-     *
-     * first two vertices are centers of the bottom and top faces, respectively.
-     * remaining vertices ordered with alternating bottom/top vertices (see
-     * diagram below).
-     *
-     * center of bottom face will be positioned at (x, y, z) = (0, 0, 0)
-     *
-     *   2--4--6--8
-     *   | /| /| /|
-     *   |/ |/ |/ |
-     *   1--3--5--7
-     *   |--|
-     *    ^
-     *   inc (degrees)
-     *
-     * returned array will contain 2*inc+2 Vector instances
-     */
-    getDistinctCylinderVertices(r: number, h: number, inc: number = 30): Vector[] {
-
-        //  possibly helpful debugging output
-        if(r === 0) {
-            console.debug('spacecraft %o being drawn with 0 radius', this);
-        }
-        if(h === 0) {
-            console.debug('spacecraft %o being drawn with 0 height', this);
-        }
-
-        //  start with the centers of the bottom (z = 0) and top (z = h) faces
-        let vertices: Vector[] = [
-            new Vector(0, 0, 0),
-            new Vector(0, 0, h)
-        ];
-
-        //  calculate coordinates of remaining vertices
-        const TWO_PI = 2 * Math.PI;
-        inc = inc * Math.PI / 180; //  convert the increment angle to radians
-        let x: number, y: number;
-        for(let theta = 0; theta < TWO_PI; theta += inc) {
-
-            x = r * Math.cos(theta);
-            y = r * Math.sin(theta);
-
-            //  push bottom first, then top
-            vertices.push(new Vector(x, y, 0), new Vector(x, y, h));
-        }
-
-        return vertices;
     }
 }
 
