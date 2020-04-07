@@ -2,17 +2,14 @@
  */
 //@ts-ignore
 
-import {Spacecraft} from './Spacecraft.js';
 import {OrbitView} from './OrbitView.js';
+import {sim, getCraft, addCraft, initSim} from './sim.js';
+import {Spacecraft} from './Spacecraft.js';
 
 class OrbitGame {
 
     /** the game's WebGL interface */
     private view: OrbitView;
-
-    /** the game's master crafts list contains all spacecraft represented by
-     * the simulation, including the active one */
-    private _crafts: Spacecraft[] = [];
 
     /** construct a game instance
      *
@@ -24,57 +21,6 @@ class OrbitGame {
         //  the OrbitView constructor is responsible for searching for its
         //  <canvas> element
         this.view = new OrbitView();
-    }
-
-    /** get the spacecraft at a given index in the master crafts list
-     *  @throws RangeError - given index argument is out of bounds
-     */
-    getCraft(ind: number = 0): Spacecraft {
-        if(ind > this._crafts.length || ind < 0) {
-            console.debug(`invalid index ${ind} for accessing spacecraft in`
-                + ` master crafts list %o`, this._crafts);
-            throw new RangeError(`invalid master craft list index ${ind}`);
-        }
-        return this._crafts[ind];
-    }
-    /** add a new spacecraft and return the total number of crafts */
-    addCraft(craft: Spacecraft): number {
-        let ind = this._crafts.indexOf(craft);
-        if(ind >= 0) {
-            console.debug('master crafts list already includes %o - moving it' +
-                ' to the top (end) of the list', craft);
-
-            this._crafts.splice(ind, 1);
-            return this._crafts.push(craft);
-        }
-
-        return this._crafts.push(craft);
-    }
-    /** remove a spacecraft, specified by index or reference, from the master
-     *  crafts list amd return that spacecraft
-     *
-     *  @throws RangeError - numeric index argument is out of bounds or
-     *      Spacecraft reference is not in the master crafts list
-     */
-    removeCraft(craft: Spacecraft | number): Spacecraft {
-        let ind: number;
-        if(craft instanceof Spacecraft) {
-            ind = this._crafts.indexOf(craft);
-        }
-        else {
-            ind = craft;
-        }
-
-        if(ind > this._crafts.length || ind < 0) {
-            console.debug(`invalid index ${ind} for removing spacecraft from`
-                + ` master crafts list %o`, this._crafts);
-            if(craft instanceof Spacecraft) {
-                console.debug(`%o was not found in the master crafts list`, craft);
-            }
-            throw new RangeError(`invalid master craft list index ${ind}`);
-        }
-
-        return this._crafts.splice(ind, 1)[0];
     }
 
     /** initialize the game - load the last saved simulation state, initialize
@@ -91,10 +37,20 @@ class OrbitGame {
 
         //  initialize the simulator with loaded state data
 
+        //  add a spacecraft to the simulation environment
+        let explorer3 = new Spacecraft('Explorer 3');
+        addCraft(explorer3);
+
+        //  initialize the sim
+        initSim();
+
         //  initialize the rendering interface with element/vertex data to be
         //  rendered
-        let elements = this.getCraft().getElements();
+        let elements = getCraft().elements;
         this.view.init(elements);
+
+        //  run the sim
+        sim();
 
         return 0;
     }

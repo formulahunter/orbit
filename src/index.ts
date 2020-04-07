@@ -218,17 +218,22 @@
  * Wikipedia - Falcon 9 Full Thrust
  * - lots of data on the Falcon 9 Blocks 1 - 5
  * - https://en.wikipedia.org/wiki/Falcon_9_Full_Thrust
+ *
+ * Falcon 9 Blocks 1 - 5 booster entry energy comparison
+ *  - https://www.reddit.com/r/spacex/comments/elzp52/falcon_boosters_entry_energy_comparison/
+ *
+ * Shahar603 on GitHub - links in "mission control" readme.md
+ * - parameters for various rockets on FlightClub.io
+ * - flight analysis by /u/veebay
+ * - Falcon 9 systems details by /u/ap0r
+ * - https://github.com/shahar603/missioncontrol
+ *
+ * JGM-3 coefficients (?)
+ * - https://space.stackexchange.com/questions/29859/jgm-3-vs-egm2008-coefficients
+ * --> http://www.csr.utexas.edu/publications/statod/TabD.3.new.txt
  */
-
 import {OrbitGame} from './OrbitGame.js';
-import {Spacecraft} from './Spacecraft.js';
-
-let vanguard = new Spacecraft('Vanguard-1C');
-vanguard.height = 1;
-vanguard.radius = 1;
-console.debug(vanguard.getElements());
 
 let game = new OrbitGame();
-game.addCraft(vanguard);
-console.log(`game initialization result: ${game.init()}`);
+game.init();
 
