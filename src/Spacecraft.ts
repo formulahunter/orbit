@@ -61,7 +61,7 @@ import {TWO_PI} from './constants.js';
  * compose triangles */
 interface WGLElementData {
     vertices: number[],
-    elements: number[]
+    indices: number[]
 }
 
 class Spacecraft {
@@ -661,7 +661,7 @@ class Cylinder extends SpacecraftComponent {
         //      ARRAYS INCREMENTALLY
         return {
             vertices: finalVerts.map(v => v.valueOf()).flat(),
-            elements: bottom.concat(sides).concat(top).flat()
+            indices: bottom.concat(sides).concat(top).flat()
         };
     }
 }
