@@ -355,7 +355,7 @@ class Spacecraft extends GraphicsElement {
 }
 
 
-abstract class SpacecraftComponent {
+abstract class SpacecraftComponent extends GraphicsElement {
 
     /** total mass of the component */
     protected _mass: number = 0;
@@ -698,6 +698,16 @@ class Cylinder extends SpacecraftComponent {
             normals: [],
             indices: bottom.concat(sides).concat(top).flat()
         };
+    }
+
+    /** get an array of all vertices forming the shape of this cylinder */
+    thick(): Vector[] {
+        return this.vectorArray;
+    }
+
+    /** this method doesn't make sense here - returns an empty array for now */
+    thickCW(): Vector[] {
+        return []
     }
 }
 
