@@ -55,7 +55,7 @@
  */
 import {getTrueAnomAt, KeplerianElements} from './sim.js';
 import {Vector} from './kinematics/geometry/Vector.js';
-import {WGLElementData} from './OrbitView.js';
+import {WGLElementData} from './rendering/WGLElementData.js';
 import {TWO_PI} from './constants.js';
 
 
@@ -178,17 +178,19 @@ class Spacecraft {
     /** get vertex and index arrays of all components of this spacecraft */
     get elements(): WGLElementData {
 
-        let elements: WGLElementData = {
+        let indices: WGLElementData = {
             vertices: [],
+            colors: [],
+            normals: [],
             indices: []
         };
         for(let i = 0; i < this._components.length; ++i) {
             let compEl: WGLElementData = this.getComponent(i).elements;
-            elements.vertices = elements.vertices.concat(compEl.vertices);
-            elements.indices = elements.indices.concat(compEl.indices);
+            indices.vertices = indices.vertices.concat(compEl.vertices);
+            indices.indices = indices.indices.concat(compEl.indices);
         }
 
-        return elements;
+        return indices;
     }
 
     /** get the component at a given index in the components list (defaults to
@@ -679,6 +681,8 @@ class Cylinder extends SpacecraftComponent {
         //      ARRAYS INCREMENTALLY
         return {
             vertices: finalVerts.map(v => v.valueOf()).flat(),
+            colors: [],
+            normals: [],
             indices: bottom.concat(sides).concat(top).flat()
         };
     }

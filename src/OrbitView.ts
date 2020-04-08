@@ -11,13 +11,7 @@
  */
 //@ts-ignore
 import {mat4} from '../ext/gl-matrix/index.js';
-
-/** this interface assumes that vertices are grouped into triplets to
- * compose triangles */
-interface WGLElementData {
-    vertices: number[],
-    indices: number[]
-}
+import {WGLElementData} from './rendering/WGLElementData.js';
 
 type ShaderProgramInfo = {
     program: WebGLProgram,
@@ -477,4 +471,4 @@ class OrbitView {
 }
 
 
-export {OrbitView, WGLElementData};
+export {OrbitView};
