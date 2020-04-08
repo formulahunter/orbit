@@ -53,13 +53,14 @@
  * will likely be needed to trigger related changes when their private values
  * are modified (thrust-to-weight ratio in the GUI, for example).
  */
+import {GraphicsElement} from './rendering/GraphicsElement.js';
 import {getTrueAnomAt, KeplerianElements} from './sim.js';
 import {Vector} from './kinematics/geometry/Vector.js';
 import {WGLElementData} from './rendering/WGLElementData.js';
 import {TWO_PI} from './constants.js';
 
 
-class Spacecraft {
+class Spacecraft extends GraphicsElement {
 
     private _name: string;
 
@@ -115,6 +116,8 @@ class Spacecraft {
     };
 
     constructor(name: string = 'noname') {
+        super();
+
         this._name = name;
         this.addComponent(new Cylinder(6, 2));
         // console.log('cylinder elements: %o', this.getComponent().elements);
@@ -163,6 +166,16 @@ class Spacecraft {
      *  body's inertial frame */
     set vel(value: Vector) {
         this._vel = value;
+    }
+
+    /** get an array of all vertices of this spacecraft's components */
+    thick(): Vector[] {
+        return this.vectorArray;
+    }
+
+    /** this method doesn't make sense here - returns an empty array for now */
+    thickCW(): Vector[] {
+        return []
     }
 
     /** get all vertices of components of this spacecraft */
