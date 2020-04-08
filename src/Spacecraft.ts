@@ -165,6 +165,32 @@ class Spacecraft {
         this._vel = value;
     }
 
+    /** get all vertices of components of this spacecraft */
+    get vectorArray(): Vector[] {
+
+        let verts: Vector[] = [];
+        for(let i = 0; i < this._components.length; ++i) {
+            verts = verts.concat(this.getComponent(i).vectorArray);
+        }
+
+        return verts;
+    }
+    /** get vertex and index arrays of all components of this spacecraft */
+    get elements(): WGLElementData {
+
+        let elements: WGLElementData = {
+            vertices: [],
+            indices: []
+        };
+        for(let i = 0; i < this._components.length; ++i) {
+            let compEl: WGLElementData = this.getComponent(i).elements;
+            elements.vertices = elements.vertices.concat(compEl.vertices);
+            elements.indices = elements.indices.concat(compEl.indices);
+        }
+
+        return elements;
+    }
+
     /** get the component at a given index in the components list (defaults to
      * first component in list)
      *
@@ -218,21 +244,6 @@ class Spacecraft {
         }
 
         return this._components.splice(ind, 1)[0];
-    }
-
-    /** temporary implementation */
-    get elements(): WGLElementData {
-        let elements: WGLElementData = {
-            vertices: [],
-            indices: []
-        };
-        for(let i = 0; i < this._components.length; ++i) {
-            let compEl: WGLElementData = this.getComponent(i).elements;
-            elements.vertices = elements.vertices.concat(compEl.vertices);
-            elements.indices = elements.indices.concat(compEl.indices);
-        }
-
-        return elements;
     }
 
     /** get the max thrust at standard temp & pressure */
