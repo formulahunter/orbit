@@ -17,6 +17,9 @@ doc/*
 #  ignore log files
 log/*
 
+#  ignore project ideas directory
+similar-projects/*
+
 #  ignore Git message files
 *-message.md
 *-msg.md
