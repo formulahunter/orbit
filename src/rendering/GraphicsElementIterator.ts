@@ -1,4 +1,4 @@
-import {cart} from '../kinematics/geometry/types.js';
+import {cart} from '../geometry/types.js';
 import {GraphicsElement} from './GraphicsElement.js';
 
 

@@ -1,5 +1,5 @@
-import {cart, dist} from '../kinematics/geometry/types.js';
-import {Vector} from '../kinematics/geometry/Vector.js';
+import {cart, dist} from '../geometry/types.js';
+import {Vector} from '../geometry/Vector.js';
 import {GraphicsElementIterator} from './GraphicsElementIterator.js';
 
 

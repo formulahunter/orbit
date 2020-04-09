@@ -55,7 +55,7 @@
  */
 import {GraphicsElement} from './rendering/GraphicsElement.js';
 import {getTrueAnomAt, KeplerianElements} from './sim.js';
-import {Vector} from './kinematics/geometry/Vector.js';
+import {Vector} from './geometry/Vector.js';
 import {DataIndex} from './rendering/DataIndex.js';
 import {TWO_PI} from './constants.js';
 
