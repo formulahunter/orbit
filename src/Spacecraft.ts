@@ -173,11 +173,6 @@ class Spacecraft extends GraphicsElement {
         return this.vectorArray;
     }
 
-    /** this method doesn't make sense here - returns an empty array for now */
-    thickCW(): Vector[] {
-        return []
-    }
-
     /** get all vertices of components of this spacecraft */
     get vectorArray(): Vector[] {
 
@@ -703,11 +698,6 @@ class Cylinder extends SpacecraftComponent {
     /** get an array of all vertices forming the shape of this cylinder */
     thick(): Vector[] {
         return this.vectorArray;
-    }
-
-    /** this method doesn't make sense here - returns an empty array for now */
-    thickCW(): Vector[] {
-        return []
     }
 }
 

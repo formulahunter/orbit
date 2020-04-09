@@ -61,30 +61,15 @@ abstract class GraphicsElement {
     flat(): dist[] {
         return this.shallow().flat();
     }
-    /** get an array of numbers representing sequential x, y, z coordinates
-     * representing all of a primitive's vertices and ordered in preparation
-     * for clockwise winding */
-    flatCW(): dist[] {
-        return this.shallowCW().flat();
-    }
 
     /** get an array of nested [x, y, z] coordinate arrays representing all of a
      * primitive's vertices */
     shallow(): cart[] {
         return this.thick().map(v => v.valueOf());
     }
-    /** get an array of nested [x, y, z] coordinate arrays representing all of a
-     * primitive's vertices and ordered in preparation for reverse (clockwise)
-     * winding */
-    shallowCW(): cart[] {
-        return this.thick().map(v => v.valueOf());
-    }
 
     /** get an array of Vectors representing all of a primitive's vertices */
     abstract thick(): Vector[];
-    /** get an array of Vectors representing all of a primitive's vertices
-     * and ordered in preparation for reverse (clockwise) winding */
-    abstract thickCW(): Vector[];
 }
 
 
