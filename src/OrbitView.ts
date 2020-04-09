@@ -11,7 +11,7 @@
  */
 //@ts-ignore
 import {mat4} from '../ext/gl-matrix/index.js';
-import {WGLElementData} from './rendering/WGLElementData.js';
+import {DataIndex} from './rendering/DataIndex.js';
 
 type ShaderProgramInfo = {
     program: WebGLProgram,
@@ -104,7 +104,7 @@ class OrbitView {
      *
      * https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Tutorial/Using_shaders_to_apply_color_in_WebGL
      */
-    init(elements: WGLElementData): number {
+    init(elements: DataIndex): number {
 
         //  compile and link a shader program from vertex & fragment shader
         //  sources
@@ -367,7 +367,7 @@ class OrbitView {
      * THIS IMPLEMENTATION ASSUMES A CYLINDRICAL SHAPE WITH EXACTLY 12 EDGES
      *
      * @throws TypeError - wgl.createBuffer returned an invalid buffer */
-    initBuffers(elements: WGLElementData): BufferIndex {
+    initBuffers(elements: DataIndex): BufferIndex {
 
         //  create a buffer to store the square's vertex positions
         const positionBuffer: WebGLBuffer | null = this.wgl.createBuffer();

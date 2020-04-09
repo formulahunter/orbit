@@ -56,7 +56,7 @@
 import {GraphicsElement} from './rendering/GraphicsElement.js';
 import {getTrueAnomAt, KeplerianElements} from './sim.js';
 import {Vector} from './kinematics/geometry/Vector.js';
-import {WGLElementData} from './rendering/WGLElementData.js';
+import {DataIndex} from './rendering/DataIndex.js';
 import {TWO_PI} from './constants.js';
 
 
@@ -184,10 +184,10 @@ class Spacecraft extends GraphicsElement {
         return verts;
     }
     /** get vertex and index arrays of all components of this spacecraft */
-    get elements(): WGLElementData {
+    get elements(): DataIndex {
 
-        let compElements: WGLElementData[] = [];
-        let counts: {[key in keyof WGLElementData]: number} = {
+        let compElements: DataIndex[] = [];
+        let counts: {[key in keyof DataIndex]: number} = {
             position: 0,
             color: 0,
             normal: 0,
@@ -201,13 +201,13 @@ class Spacecraft extends GraphicsElement {
             counts.index += compElements[i].index.length;
         }
 
-        let elements: WGLElementData = {
+        let elements: DataIndex = {
             position: new Float32Array(counts.position),
             color: new Float32Array(counts.color),
             normal: new Float32Array(counts.normal),
             index: new Uint16Array(counts.index)
         };
-        let offset: {[key in keyof WGLElementData]: number} = {
+        let offset: {[key in keyof DataIndex]: number} = {
             position: 0,
             color: 0,
             normal: 0,
@@ -444,7 +444,7 @@ abstract class SpacecraftComponent extends GraphicsElement {
     abstract get vectorArray(): Vector[];
 
     /** get a vertex array and corresponding element array */
-    abstract get elements(): WGLElementData;
+    abstract get elements(): DataIndex;
 }
 
 
@@ -612,7 +612,7 @@ class Cylinder extends SpacecraftComponent {
      * in total the returned object will contain (2+4+2)*n+2 Vector instances
      * where n is the number of edges: n = 360 / inc
      */
-    get elements(): WGLElementData {
+    get elements(): DataIndex {
 
         //  get a list of vertices
         let vertices: Vector[] = this.vectorArray;
