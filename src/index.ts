@@ -74,6 +74,23 @@
  *      - renders scene using webgl
  */
 /**
+ * Data transfer strategy
+ *    - considering use of SharedArrayBuffers
+ *      - would significantly speed messages between control & sim (in service
+ *        worker)
+ *        - https://github.com/tc39/ecmascript_sharedmem/blob/master/TUTORIAL.md
+ *      - disabled by default in firefox (and others) as of 1/5/2018 due to
+ *        security vulnerabilities discovered
+ *        - https://spectreattack.com/
+ *        - https://spectreattack.com/spectre.pdf
+ *        - https://blog.mozilla.org/security/2018/01/03/mitigations-landing-new-class-timing-attack/
+ *        - https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer/Planned_changes
+ *        - https://www.sitepen.com/blog/the-return-of-sharedarraybuffers-and-atomics/
+ *    - parlib may help manage parallel/async operations and load balancing
+ *      - https://github.com/lars-t-hansen/parlib-simple
+ *
+ */
+/**
  * Graphics summary
  * The simulator will feature a graphic display based on the HTML5 <canvas>
  * element, with GUI components implemented using HTML DOM elements and real-
