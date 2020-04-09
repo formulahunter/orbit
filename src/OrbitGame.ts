@@ -2,14 +2,10 @@
  */
 //@ts-ignore
 
-import {OrbitView} from './OrbitView.js';
 import {sim, getCraft, addCraft, initSim} from './sim.js';
 import {Spacecraft} from './Spacecraft.js';
 
 class OrbitGame {
-
-    /** the game's WebGL interface */
-    private view: OrbitView;
 
     /** construct a game instance
      *
@@ -18,9 +14,6 @@ class OrbitGame {
      */
     constructor() {
 
-        //  the OrbitView constructor is responsible for searching for its
-        //  <canvas> element
-        this.view = new OrbitView();
     }
 
     /** initialize the game - load the last saved simulation state, initialize
@@ -44,24 +37,10 @@ class OrbitGame {
         //  initialize the sim
         initSim();
 
-        //  initialize the rendering interface with element/vertex data to be
-        //  rendered
-        let elements = getCraft().elements;
-        this.view.init(elements);
-
         //  run the sim
         sim();
 
         return 0;
-    }
-
-    /** initiate a render cycle
-     *
-     * after initialization, this method is the primary interface to the
-     * OrbitView instance
-     */
-    draw(): void {
-
     }
 }
 
