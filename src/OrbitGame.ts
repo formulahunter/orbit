@@ -3,8 +3,8 @@
 //@ts-ignore
 
 import {OrbitView} from './OrbitView.js';
-import {sim, getCraft, addCraft, initSim} from './sim.js';
 import {Spacecraft} from './Spacecraft.js';
+import {DataIndex} from './rendering/DataIndex.js';
 
 class OrbitGame {
 
@@ -23,13 +23,7 @@ class OrbitGame {
         this.view = new OrbitView();
     }
 
-    /** initialize the game - load the last saved simulation state, initialize
-     * the simulation (but don't start it), render the resulting static scene,
-     * and initialize the gui with any context-specific interface. return 0 on
-     * success, -1 on failure
-     *
-     * simulation time, planets, spacecraft etc.
-     */
+    /** initialize the OrbitView instance with mock data */
     init(): number {
 
         //  load the last saved simulation state
@@ -39,18 +33,11 @@ class OrbitGame {
 
         //  add a spacecraft to the simulation environment
         let explorer3 = new Spacecraft('Explorer 3');
-        addCraft(explorer3);
-
-        //  initialize the sim
-        initSim();
 
         //  initialize the rendering interface with element/vertex data to be
         //  rendered
-        let elements = getCraft().elements;
+        let elements: DataIndex = explorer3.elements;
         this.view.init(elements);
-
-        //  run the sim
-        sim();
 
         return 0;
     }

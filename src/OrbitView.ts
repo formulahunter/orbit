@@ -98,10 +98,6 @@ class OrbitView {
     /** initialize the game - simulation time, planets, spacecraft etc. - and
      * return 0 on success, -1 on failure
      *
-     * this particular implementation of the init() method is based on MDN's
-     * WebGL tutorial, and specifically on the section titled 'Using shaders to
-     * apply color in WebGL'
-     *
      * https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Tutorial/Using_shaders_to_apply_color_in_WebGL
      */
     init(elements: DataIndex): number {

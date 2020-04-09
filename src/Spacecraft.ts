@@ -54,7 +54,6 @@
  * are modified (thrust-to-weight ratio in the GUI, for example).
  */
 import {GraphicsElement} from './rendering/GraphicsElement.js';
-import {getTrueAnomAt, KeplerianElements} from './sim.js';
 import {Vector} from './geometry/Vector.js';
 import {DataIndex} from './rendering/DataIndex.js';
 import {TWO_PI} from './constants.js';
@@ -72,48 +71,10 @@ class Spacecraft extends GraphicsElement {
     /** orbital position vector (with respect to the reference body's intertial
      * frame) */
     private _pos: Vector = new Vector(0, 0, 0);
-    /** orbital velocity vector (with respect to the reference body's intertial
-     * frame) */
-    private _vel: Vector = new Vector(0, 0, 0);
 
     /** primitive 3D geometric components making up the form of the
      * spacecraft */
     private _components: SpacecraftComponent[] = [];
-
-    /** maximum thrust at standard atmosphere temp/pressure */
-    private _thrust_surface: number = 0;
-    /** maximum thrust in a vacuum */
-    private _thrust_vacuum: number = 0;
-
-    /** empty mass of structural and propulsive components (everything except
-     * propellant and payload) */
-    private _mass_empty: number = -1;
-    /** total instantaneous mass of the propellant */
-    private _mass_propellant: number = -1;
-    /** mass of the payload **/
-    private _mass_payload: number = -1;
-    /** total mass (sum of empty, propellant, and payload masses, recalculated
-     * automatically as the former component masses are manipulated
-     * ***do not assign this property manually***
-     */
-    private _mass_total: number = -1;
-
-    /** Keplerian elements describing this spacecraft's orbital plane &
-     * trajectory */
-    orbit: KeplerianElements = {
-            sMaj:       8000,
-            e:          0,
-            M0:         0,
-            incl:       0,
-            longAsc:    0,
-            argP:       0,
-            M:          -1,
-            rBar:       4000,
-            mass:       5000,
-            axiTilt:    0,
-            n:          Math.sqrt((6.674 * 10 ** 11) * (5000) / Math.pow(4.50 * 10 ** 12, 3)),
-            gamma:      getTrueAnomAt
-    };
 
     constructor(name: string = 'noname') {
         super();
@@ -155,17 +116,6 @@ class Spacecraft extends GraphicsElement {
      *  body's inertial frame */
     set pos(value: Vector) {
         this._pos = value;
-    }
-
-    /** get this craft's orbital velocity vector (with respect to the reference
-     *  body's inertial frame */
-    get vel(): Vector {
-        return this._vel;
-    }
-    /** set this craft's orbital velocity vector (with respect to the reference
-     *  body's inertial frame */
-    set vel(value: Vector) {
-        this._vel = value;
     }
 
     /** get an array of all vertices of this spacecraft's components */
@@ -284,160 +234,19 @@ class Spacecraft extends GraphicsElement {
 
         return this._components.splice(ind, 1)[0];
     }
-
-    /** get the max thrust at standard temp & pressure */
-    get thrust_surface(): number {
-        return this._thrust_surface;
-    }
-    /** set the max thrust at standard temp & pressure */
-    set thrust_surface(value: number) {
-        this._thrust_surface = value;
-    }
-
-    /** get the max thrust in vacuum */
-    get thrust_vacuum(): number {
-        return this._thrust_vacuum;
-    }
-    /** get the max thrust in vacuum */
-    set thrust_vacuum(value: number) {
-        this._thrust_vacuum = value;
-    }
-
-    /** get the total mass as the sum of empty, propellant and payload masses */
-    get mass(): number {
-
-        if(this._mass_total < 0) {
-
-            //  all three component masses must be defined
-            let empty: number = this._mass_empty;
-            let fuel: number = this._mass_propellant;
-            let payload: number = this._mass_payload;
-            if(empty < 0 || fuel < 0 || payload < 0) {
-                console.debug(`mass of spacecraft %o is indeterminate`
-                    + `\nempty: ${empty}`
-                    + `\npropellant: ${fuel}`
-                    + `\npayload: ${payload}`, this);
-                throw new TypeError(`indeterminate spacecraft mass`);
-            }
-
-            this._mass_total = empty + fuel + payload;
-        }
-
-        return this._mass_total;
-    }
-
-    /** get the empty mass (total less propellant and payload) */
-    get emptyMass(): number {
-
-        if(this._mass_empty < 0) {
-            console.debug('undefined empty mass for spacecraft %o', this);
-            throw new TypeError('undefined empty mass');
-        }
-
-        return this._mass_empty;
-    }
-    /** set the empty mass (total less propellant and payload) */
-    set emptyMass(empty: number) {
-        //  set the empty mass and invalidate the total mass
-        this._mass_empty = empty;
-        this._mass_total = -1;
-    }
-
-    /** get the propellant mass */
-    get propellantMass(): number {
-
-        if(this._mass_propellant < 0) {
-            console.debug('undefined propellant mass for spacecraft %o', this);
-            throw new TypeError('undefined propellant mass');
-        }
-
-        return this._mass_propellant;
-    }
-    /** set the propellant mass */
-    set propellantMass(propellant: number) {
-        //  set the empty mass and invalidate the total mass
-        this._mass_propellant = propellant;
-        this._mass_total = -1;
-    }
-
-    /** get the payload mass */
-    get payloadMass(): number {
-
-        if(this._mass_payload < 0) {
-            console.debug('undefined payload mass for spacecraft %o', this);
-            throw new TypeError('undefined payload mass');
-        }
-
-        return this._mass_payload;
-    }
-    /** set the payload mass */
-    set payloadMass(payload: number) {
-        //  set the payload mass and invalidate the total mass
-        this._mass_payload = payload;
-        this._mass_total = -1;
-    }
 }
 
 
 abstract class SpacecraftComponent extends GraphicsElement {
 
-    /** total mass of the component */
-    protected _mass: number = 0;
-
-    /** location of component's center of mass wrt its own reference frame */
-    protected _com: Vector = new Vector;
-
     /** the position of the component wrt the spacecraft's reference frame -
      * given in terms of a designated vertex determined by shape (subclass) */
     protected _pos: Vector = new Vector;
-
-    /** the velocity of the component wrt the spacecraft's net velocity */
-    protected _vel: Vector = new Vector;
-
-    /** get this component's mass */
-    get mass(): number {
-        return this._mass;
-    }
 
     /** get the component's position vector wrt the spacecraft's reference
      * frame */
     get pos(): Vector {
         return Vector.copy(this._pos);
-    }
-
-    /** get the component's velocity vector wrt the spacecraft's velocity
-     * vector
-     *
-     * revisit - make sure the physics work out with this definition
-     */
-    get vel(): Vector {
-        return Vector.copy(this._vel);
-    }
-
-    /** get the component's angular velocity wrt that of the spacecraft
-     *
-     * revisit - implement (probably need to do so for the spacecraft first (?))
-     * revisit - make sure the physics work out with this definition
-     */
-    get angularVel(): Vector {
-        return new Vector();
-    }
-
-    /** get linear momentum of this individual component
-     *
-     * revisit - contingent upon validity of velocity vector definition
-     */
-    get momentum(): Vector {
-        return Vector.copy(this.vel).scale(this.mass);
-    }
-
-    /** get angular momentum of this individual component
-     *
-     * revisit - implement (probably need to do so for the spacecraft first (?))
-     * revisit - contingent upon validity of angular velocity vector
-     */
-    get angularMomentum(): Vector {
-        return new Vector();
     }
 
     /** get an array of geometric vertices as vectors */
