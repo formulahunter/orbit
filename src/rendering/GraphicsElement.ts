@@ -1,19 +1,8 @@
 import {cart, dist} from '../kinematics/geometry/types.js';
 import {Vector} from '../kinematics/geometry/Vector.js';
-import {VertexOrder} from './VertexOrder.js';
-import {VertexWinding} from './VertexWinding.js';
 
 
 abstract class GraphicsElement {
-
-    private _drawMode: VertexOrder;
-
-    private _winding: VertexWinding;
-
-    constructor(drawMode: VertexOrder = VertexOrder.TRIANGLES, winding: VertexWinding = VertexWinding.CCW) {
-        this._drawMode = drawMode;
-        this._winding = winding;
-    }
 
     /** get an iterator to loop over "shallow" vertex array using for..of
      *
@@ -47,14 +36,6 @@ abstract class GraphicsElement {
                 throw new TypeError('unsupported WebGL draw mode');
         }
     }*/
-
-    get drawMode(): VertexOrder {
-        return this._drawMode;
-    }
-
-    get winding(): VertexWinding {
-        return this._winding;
-    }
 
     /** get an array of numbers representing sequential x, y, z coordinates
      * representing all of a primitive's vertices */
