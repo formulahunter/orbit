@@ -1,10 +1,10 @@
 /** this interface assumes that vertices are grouped into triplets to
  * compose triangles */
 interface WGLElementData {
-    vertices: number[],
-    colors: number[],
-    normals: number[],
-    indices: number[]
+    position: Float32Array,
+    color: Float32Array,
+    normal: Float32Array,
+    index: Uint16Array
 }
 
 export {WGLElementData};

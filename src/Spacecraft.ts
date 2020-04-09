@@ -186,19 +186,48 @@ class Spacecraft extends GraphicsElement {
     /** get vertex and index arrays of all components of this spacecraft */
     get elements(): WGLElementData {
 
-        let indices: WGLElementData = {
-            vertices: [],
-            colors: [],
-            normals: [],
-            indices: []
+        let compElements: WGLElementData[] = [];
+        let counts: {[key in keyof WGLElementData]: number} = {
+            position: 0,
+            color: 0,
+            normal: 0,
+            index: 0
         };
         for(let i = 0; i < this._components.length; ++i) {
-            let compEl: WGLElementData = this.getComponent(i).elements;
-            indices.vertices = indices.vertices.concat(compEl.vertices);
-            indices.indices = indices.indices.concat(compEl.indices);
+            compElements.push(this.getComponent(i).elements);
+            counts.position += compElements[i].position.length;
+            counts.color += compElements[i].color.length;
+            counts.normal += compElements[i].normal.length;
+            counts.index += compElements[i].index.length;
         }
 
-        return indices;
+        let elements: WGLElementData = {
+            position: new Float32Array(counts.position),
+            color: new Float32Array(counts.color),
+            normal: new Float32Array(counts.normal),
+            index: new Uint16Array(counts.index)
+        };
+        let offset: {[key in keyof WGLElementData]: number} = {
+            position: 0,
+            color: 0,
+            normal: 0,
+            index: 0
+        };
+        for(let comp of compElements) {
+            //  add comp's data to aggregate arrays
+            elements.position.set(comp.position, offset.position);
+            elements.color.set(comp.color, offset.color);
+            elements.normal.set(comp.normal, offset.normal);
+            elements.index.set(comp.index.map(ind => ind + offset.index), offset.index);
+
+            //  update offsets
+            offset.position += comp.position.length;
+            offset.color += comp.color.length;
+            offset.normal += comp.normal.length;
+            offset.index += comp.index.length;
+        }
+
+        return elements;
     }
 
     /** get the component at a given index in the components list (defaults to
@@ -688,10 +717,10 @@ class Cylinder extends SpacecraftComponent {
         //      ALSO, ELIMINATE INTERMEDIATE ARRAYS AND COMPILE VERT & ELEMENT
         //      ARRAYS INCREMENTALLY
         return {
-            vertices: finalVerts.map(v => v.valueOf()).flat(),
-            colors: [],
-            normals: [],
-            indices: bottom.concat(sides).concat(top).flat()
+            position: Float32Array.from(finalVerts.map(v => v.valueOf()).flat()),
+            color: Float32Array.from([]),
+            normal: Float32Array.from([]),
+            index: Uint16Array.from(bottom.concat(sides).concat(top).flat())
         };
     }
 

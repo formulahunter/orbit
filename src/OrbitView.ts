@@ -26,16 +26,6 @@ type BufferIndex = {
     [buf: string]: WebGLBuffer
 };
 
-function triplets<T>(acc: T[][], val:T): T[][] {
-    if(acc[acc.length-1].length < 3) {
-        acc[acc.length-1].push(val);
-    }
-    else {
-        acc.push([val]);
-    }
-    return acc;
-}
-
 /** vertex shader source code */
 const vsSource = `
     attribute vec4 aVertexPosition;
@@ -392,12 +382,8 @@ class OrbitView {
         this.wgl.bindBuffer(this.wgl.ARRAY_BUFFER, positionBuffer);
 
         //  get vertex & element arrays for the craft
-        console.debug('final vertices array: %o', elements.vertices);
-        console.debug('(x, y, z coords: %0',
-            elements.vertices.map(val => val.toFixed(3))
-            // @ts-ignore
-                    .reduce(triplets, [[]]));
-        console.debug('final indices array: %o', elements.indices);
+        console.debug('final vertices array: %o', elements.position);
+        console.debug('final indices array: %o', elements.index);
 
         //  fill the array buffer with a typed array derived from the positions
         //  array previously defined
@@ -408,7 +394,7 @@ class OrbitView {
         //  wgl.INVALID_VALUE, & wgl.INVALID_ENUM
         //  see https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bufferData
         this.wgl.bufferData(this.wgl.ARRAY_BUFFER,
-            Float32Array.from(elements.vertices),
+            elements.position,
             this.wgl.STATIC_DRAW);
 
         //  define color sequences for the top/bottom and side surfaces
@@ -459,7 +445,7 @@ class OrbitView {
         }
         this.wgl.bindBuffer(this.wgl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         this.wgl.bufferData(this.wgl.ELEMENT_ARRAY_BUFFER,
-            Uint16Array.from(elements.indices),
+            elements.index,
             this.wgl.STATIC_DRAW);
 
         return {
