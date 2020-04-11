@@ -55,6 +55,22 @@ const fsSource = `
 /** the OrbitView class is the game's rendering engine. its objective is to
  * to extract essential model data and load it into buffers for processing in
  * WebGL.
+ *
+ * the addition of the Camera API allows the viewing position & direction to be
+ * modified view the WebConsole. the core API provides transparent write access
+ * to the parameters used to derive the model/view/projection matrices used by
+ * WebGL. these methods do not automatically invoke drawScene() and so should be
+ * preferred when multiple transforms are applied in succession (e.g. both
+ * translation and rotation). they require array arguments consisting of all
+ * relevant values - e.g. [x, y, z] for translation - even if some values
+ * will not be changed (zoom is the exception since its corresponding property,
+ * _fov, is a scalar)
+ *
+ * note on view coordinate space: WebGL's default coordinate space is aligned in
+ *  a semi-unintuitive way by default (and for good reason). Any coordinate
+ *  transforms applied do not change this, so any adjustments to camera position
+ *  and orientation must be applied with respect to the original coordinate
+ *  basis.
  */
 class OrbitView {
 
@@ -480,6 +496,92 @@ class OrbitView {
             color: colorBuffer,
             indices: indexBuffer
         };
+    }
+
+    /** set the modelView's translation
+     *
+     * part of the core Camera API, which must be used for any compound
+     * transformations involving more than one of translating, rotating, and
+     * scaling - using multiple calls to non-core methods will result in
+     * excessive/redundant drawScene() calls
+     */
+    translate(dest: [number, number, number]): void {
+        this._pos = dest;
+    }
+
+    /** set the modelView's rotation transform
+     *
+     * part of the core Camera API, which must be used for any compound
+     * transformations involving more than one of translating, rotating, and
+     * scaling - using multiple calls to non-core methods will result in
+     * excessive/redundant drawScene() calls
+     */
+    rotate(dir: [number, number]): void {
+        this._rot = dir;
+    }
+
+    /** set the modelView's scale
+     *
+     * part of the core Camera API, which must be used for any compound
+     * transformations involving more than one of translating, rotating, and
+     * scaling - using multiple calls to non-core methods will result in
+     * excessive/redundant drawScene() calls
+     */
+    scale(s: [number, number, number]): void {
+        this._scale = s;
+    }
+
+    /** set the projectionView's field of view (degrees)
+     *
+     * part of the core Camera API, which must be used for any compound
+     * transformations involving more than one of translating, rotating, and
+     * scaling - using multiple calls to non-core methods will result in
+     * excessive/redundant drawScene() calls
+     */
+    zoom(angle: number): void {
+        this._fov = angle;
+    }
+
+    /** translate the modelView matrix by the given offset [x, y, z]
+     * automatically redraws the scene
+     *
+     * part of the core Camera API, which must be used for any compound
+     * transformations involving more than one of translating, rotating, and
+     * scaling - using multiple calls to non-core methods will result in
+     * excessive/redundant drawScene() calls
+     */
+    moveBy(offset: [number, number, number]): void {
+        this.translate(this._pos.map((el, ind) => {
+            return el + offset[ind];
+        }) as [number, number, number]);
+    }
+
+    /** add the given angles to the current rotation about each axis [x, y, z]
+     *
+     * part of the core Camera API, which must be used for any compound
+     * transformations involving more than one of translating, rotating, and
+     * scaling - using multiple calls to non-core methods will result in
+     * excessive/redundant drawScene() calls
+     */
+    turnBy(offset: [number, number]): void {
+        this.rotate(this._rot.map((el, ind) => {
+            return el + offset[ind];
+        }) as [number, number]);
+    }
+
+    /** change the scaling on each axis by the given factors [x, y, z]
+     * in general scaling will probably be uniform on all three axes, but
+     * leaving the option anyway
+     *
+     * part of the core Camera API, which must be used for any compound
+     * transformations involving more than one of translating, rotating, and
+     * scaling - using multiple calls to non-core methods will result in
+     * excessive/redundant drawScene() calls
+     */
+    scaleBy(factors: [number, number, number]): void {
+        this.scale(this._scale.map((el, ind) => {
+            return el * factors[ind];
+        }) as [number, number, number]);
     }
 }
 
