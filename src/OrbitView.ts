@@ -654,14 +654,14 @@ class OrbitView {
     /** move the camera's longitude by the given angle in the positive
      * direction */
     spinLf(angle: number = 5): void {
-        this._rot[1] += angle;
+        this._rot[1] -= angle;
         this.drawScene();
     }
 
     /** move the camera's longitude by the given angle in the negative
      * direction */
     spinRt(angle: number = 5): void {
-        this._rot[1] -= angle;
+        this._rot[1] += angle;
         this.drawScene();
     }
 
