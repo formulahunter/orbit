@@ -9,6 +9,17 @@
  * [1] https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices
  *
  */
+/**
+ * general projection/perspective transform resources
+ * all in/directly linked from MDN's "WebGL model view projection" article:
+ *  - https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_model_view_projection#Perspective_matrix
+ *
+ * https://webglfundamentals.org/webgl/lessons/webgl-3d-perspective.html
+ * http://ogldev.atspace.co.uk/www/tutorial12/tutorial12.html
+ * https://stackoverflow.com/questions/28286057/trying-to-understand-the-math-behind-the-perspective-matrix-in-webgl/28301213#28301213
+ * https://unspecified.wordpress.com/2012/06/21/calculating-the-gluperspective-matrix-and-other-opengl-matrix-maths/
+ * http://www.songho.ca/opengl/gl_projectionmatrix.html
+ */
 //@ts-ignore
 import {mat4} from '../ext/gl-matrix/index.js';
 import {DataIndex} from './rendering/DataIndex.js';
