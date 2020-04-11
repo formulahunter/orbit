@@ -18,9 +18,14 @@ class OrbitGame {
      */
     constructor() {
 
+        //@ts-ignore
+        window.game = this;
+
         //  the OrbitView constructor is responsible for searching for its
         //  <canvas> element
         this.view = new OrbitView();
+        //@ts-ignore
+        window.v = this.view;
     }
 
     /** initialize the OrbitView instance with mock data */
