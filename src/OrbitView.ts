@@ -56,15 +56,19 @@ const fsSource = `
  * to extract essential model data and load it into buffers for processing in
  * WebGL.
  *
- * the addition of the Camera API allows the viewing position & direction to be
- * modified view the WebConsole. the core API provides transparent write access
- * to the parameters used to derive the model/view/projection matrices used by
- * WebGL. these methods do not automatically invoke drawScene() and so should be
- * preferred when multiple transforms are applied in succession (e.g. both
- * translation and rotation). they require array arguments consisting of all
- * relevant values - e.g. [x, y, z] for translation - even if some values
- * will not be changed (zoom is the exception since its corresponding property,
- * _fov, is a scalar)
+ * the addition of the Camera API and extensions allows the viewing position &
+ * direction to be modified view the WebConsole. it includes a core API that
+ * provides transparent write access to the parameters used to derive the
+ * model/view/projection matrices used by WebGL. these methods do not
+ * automatically invoke drawScene() and so should be preferred when multiple
+ * transforms are applied in succession (e.g. both translation and rotation).
+ * they expect array arguments consisting of all relevant values - e.g.
+ * [x, y, z] for translation - even if some values will not be changed (zoom
+ * is the exception since its corresponding property, _fov, is a scalar)
+ *
+ * the extension methods are meant to simplify the WebConsole-based interface.
+ * They modify individual parameters/dimensions, accepting optional increment
+ * arguments, and cause the scene to be redrawn automatically.
  *
  * note on view coordinate space: WebGL's default coordinate space is aligned in
  *  a semi-unintuitive way by default (and for good reason). Any coordinate
@@ -582,6 +586,88 @@ class OrbitView {
         this.scale(this._scale.map((el, ind) => {
             return el * factors[ind];
         }) as [number, number, number]);
+    }
+
+    /** translate the modelView by the given distance in the positive z
+     * direction */
+    moveUp(dist: number = 1): void {
+        this._pos[1] -= dist;
+        this.drawScene();
+    }
+
+    /** translate the modelView by the given distance in the negative z
+     * direction */
+    moveDn(dist: number = 1): void {
+        this._pos[1] += dist;
+        this.drawScene();
+    }
+
+    /** translate the modelView by the given distance in the positive x
+     * direction */
+    moveRt(dist: number = 1): void {
+        this._pos[0] -= dist;
+        this.drawScene();
+    }
+
+    /** translate the modelView by the given distance in the negative x
+     * direction */
+    moveLf(dist: number = 1): void {
+        this._pos[0] += dist;
+        this.drawScene();
+    }
+
+    /** translate the modelView by the given distance in the positive y
+     * direction */
+    moveFw(dist: number = 1): void {
+        this._pos[2] += dist;
+        this.drawScene();
+    }
+
+    /** translate the modelView by the given distance in the negative y
+     * direction */
+    moveBk(dist: number = 1): void {
+        this._pos[2] -= dist;
+        this.drawScene();
+    }
+
+    /** move the camera's right ascension by the given angle in the positive
+     * direction */
+    spinUp(angle: number = 5): void {
+        this._rot[0] -= angle;
+        this.drawScene();
+    }
+
+    /** move the camera's right ascension by the given angle in the positive
+     * direction */
+    spinDn(angle: number = 5): void {
+        this._rot[0] += angle;
+        this.drawScene();
+    }
+
+    /** move the camera's longitude by the given angle in the positive
+     * direction */
+    spinLf(angle: number = 5): void {
+        this._rot[1] += angle;
+        this.drawScene();
+    }
+
+    /** move the camera's longitude by the given angle in the negative
+     * direction */
+    spinRt(angle: number = 5): void {
+        this._rot[1] -= angle;
+        this.drawScene();
+    }
+
+    /** narrow the projection transform's field of view (degrees) */
+    zoomIn(angle: number = 10): void {
+        this._fov -= angle * DEG2RAD;
+        this.drawScene();
+    }
+
+    /** widen the projection transform's field of view (degrees) */
+    zoomOut(angle: number = 10): void {
+        this._fov += angle * DEG2RAD;
+        this.drawScene();
     }
 }
 
