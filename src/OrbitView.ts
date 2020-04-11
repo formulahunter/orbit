@@ -12,6 +12,7 @@
 //@ts-ignore
 import {mat4} from '../ext/gl-matrix/index.js';
 import {DataIndex} from './rendering/DataIndex.js';
+import {DEG2RAD} from './constants.js';
 
 type ShaderProgramInfo = {
     program: WebGLProgram,
@@ -62,6 +63,18 @@ class OrbitView {
 
     /** viewport size (canvas element's clientHeight and clientWidth) */
     private vpSize: [number, number] = [-1, -1];
+
+    /** field of view (in degrees) */
+    private _fov: number = 45 * DEG2RAD;
+
+    /** camera position [x, y, z] */
+    private _pos: [number, number, number] = [0, 0, -16];
+
+     /** camera rotation about x, y, z axes (in degrees) */
+    private _rot: [number, number] = [0, 0];
+
+    /** model scaling [x, y, z] (unitless) */
+    private _scale: [number, number, number] = [3, 3, 3];
 
     /** shader program, uniform & attribute info */
     private _programInfo?: ShaderProgramInfo;
@@ -158,7 +171,8 @@ class OrbitView {
     }
 
 
-    /** draw the scene's current state using static/unchanging scene data
+    /** draw the scene's current state using static/unchanging scene data and
+     * model/view/projection transforms derived from respective properties
      *
      * revisit - need to find a way to render arbitrary number of vertices in
      *   drawElements()
@@ -195,26 +209,23 @@ class OrbitView {
         //  define the field of view, aspect ratio, and near and far z-bounds
         //  these parameters will be used to calculate elements in a 4x4
         //  projection matrix
-        let fov: number = 45 * Math.PI / 180;   // in radians
         let aspect: number = this.vpSize[0] / this.vpSize[1];
         let zNear: number = 0.1;
         let zFar: number = 100.0;
 
         //  create a perspective matrix and calculate its elements
         const projectionMatrix: mat4 = mat4.create();
-        mat4.perspective(projectionMatrix, fov, aspect, zNear, zFar);
+        mat4.perspective(projectionMatrix, this._fov, aspect, zNear, zFar);
 
         //  create a matrix where the square should be drawn and offset it
         //  slightly from the origin (mat4.create() returns a new 4x4 identity
         //  matrix)
         //  not sure why MDN shows explicit floats or the negative zero?
         const modelViewMatrix: mat4 = mat4.create();
-        mat4.translate(modelViewMatrix,     //  destination matrix
-            modelViewMatrix,    //  source matrix
-            [-0.0, 0.0, -16.0]);  //  amount to translate
-        mat4.rotateX(modelViewMatrix, modelViewMatrix, 3 * Math.PI / 8);
-        mat4.rotateZ(modelViewMatrix, modelViewMatrix, 3 * Math.PI / 4);
-        mat4.scale(modelViewMatrix, modelViewMatrix, [3.0, 3.0, 3.0]);
+        mat4.translate(modelViewMatrix, modelViewMatrix, this._pos);  //  amount to translate
+        mat4.rotateX(modelViewMatrix, modelViewMatrix, this._rot[0] * DEG2RAD);
+        mat4.rotateY(modelViewMatrix, modelViewMatrix, this._rot[1] * DEG2RAD);
+        mat4.scale(modelViewMatrix, modelViewMatrix, this._scale);
 
         //  describe exactly what the values entered into the position buffer
         //  are (i.e. each "position" defined in initBuffers() is a pair of
