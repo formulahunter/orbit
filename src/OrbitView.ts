@@ -93,7 +93,13 @@ class OrbitView {
      /** camera rotation about x, y, z axes (in degrees) */
     private _rot: [number, number] = [0, 0];
 
-    /** model scaling [x, y, z] (unitless) */
+    /** model scaling [x, y, z] (unitless)
+     *
+     * z scale should always be negative by default (convert to right-handed
+     * coordinate system). this is implemented automatically in when computing
+     * the mvp matrix
+     *  - https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_model_view_projection#Perspective_matrix
+     */
     private _scale: [number, number, number] = [3, 3, 3];
 
     /** shader program, uniform & attribute info */
@@ -246,6 +252,7 @@ class OrbitView {
         mat4.rotateX(modelViewMatrix, modelViewMatrix, this._rot[0] * DEG2RAD);
         mat4.rotateY(modelViewMatrix, modelViewMatrix, this._rot[1] * DEG2RAD);
         mat4.scale(modelViewMatrix, modelViewMatrix, this._scale);
+        mat4.scale(modelViewMatrix, modelViewMatrix, [1, 1, -1]);
 
         //  describe exactly what the values entered into the position buffer
         //  are (i.e. each "position" defined in initBuffers() is a pair of
