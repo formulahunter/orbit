@@ -63,6 +63,12 @@ class OrbitView {
     /** viewport size (canvas element's clientHeight and clientWidth) */
     private vpSize: [number, number] = [-1, -1];
 
+    /** shader program, uniform & attribute info */
+    private _programInfo?: ShaderProgramInfo;
+
+    /** final WebGLBuffers (vertex position, color, normal, index, etc) */
+    private _buffers?: BufferIndex;
+
     /** WebGL rendering context
      * Consider possible benefits of using a WebGL2RenderingContext if/when
      * supported */
@@ -132,6 +138,7 @@ class OrbitView {
                 ' program: %o', programInfo.uniforms);
             throw new TypeError('invalid shader program uniform location');
         }
+        this._programInfo = programInfo;
 
         //  initialize the position buffer with the square's vertex coordinates
         let buffers: BufferIndex;
@@ -142,19 +149,32 @@ class OrbitView {
             console.error(`error initializing buffers: ${er.toString()}`);
             return -1;
         }
+        this._buffers = buffers;
 
         //  draw the scene
-        this.drawScene(programInfo, buffers);
+        this.drawScene();
 
         return 0;
     }
 
 
-    /** draw the scene's current state
+    /** draw the scene's current state using static/unchanging scene data
      *
-     * THIS IMPLEMENTATION ASSUMES A CYLINDRICAL SHAPE WITH EXACTLY 12 EDGES
+     * revisit - need to find a way to render arbitrary number of vertices in
+     *   drawElements()
+     *
+     * @throws {TypeError} 'invalid_rendering_resources' if either _programInfo
+     *          or _buffers is undefined
      */
-    drawScene(programInfo: ShaderProgramInfo, buffers: BufferIndex): void {
+    drawScene(): void {
+
+        if(this._programInfo === undefined || this._buffers === undefined) {
+            console.debug('cannot draw scene with undefined _programInfo' +
+                ' and/or _buffers');
+            throw new TypeError('invalid_rendering_resources');
+        }
+        const programInfo = this._programInfo;
+        const buffers = this._buffers;
 
         this.wgl.viewport(0, 0, this.vpSize[0], this.vpSize[1]);
 
