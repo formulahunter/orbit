@@ -252,7 +252,7 @@ abstract class SpacecraftComponent extends GraphicsElement {
     /** get an array of geometric vertices as vectors */
     abstract get vectorArray(): Vector[];
 
-    /** get a vertex array and corresponding element array */
+    /** get a vertex array and corresponding element index array */
     abstract get elements(): DataIndex;
 }
 
@@ -353,32 +353,39 @@ class Cylinder extends SpacecraftComponent {
      * get an array of *distinct* vertices for a cylinder of given height,
      * primary radius, and secondary radius
      *
+     * center of bottom face will be positioned at (x, y, z) = (0, 0, 0) local
+     * coordinates
+     *
+     * returned array will contain 2(*edgeCount+1) Vector instances
+     *
      * many of these vertices will need to be duplicated before passing to WebGL
      * (vertices will be assigned normals based on which face they belong to, so
      * non-coplanar faces cannot share a vertex)
      *
-     * first two vertices are centers of the bottom and top faces, respectively.
-     * remaining vertices ordered with alternating bottom/top vertices (see
-     * diagram below).
+     * vertices are grouped into bottom & top surfaces, starting with the bottom
+     * perimeter followed by the bottom center, then the same for the top.
+     * splitting the returned array in half will yield each surface
+     * respectively, with center nodes at the beginning of each
      *
-     * center of bottom face will be positioned at (x, y, z) = (0, 0, 0)
+     * assuming Cylinder.edgeCount = 12, the vertex Vectors will be ordered as
+     * illustrated in the following diagram. this diagram includes connections
+     * between nodes indicative of how they might grouped into elements. these
+     * groupings are accurate *at time of writing* but should not be relied on
+     * as they are determined in elements(). not shown in this diagram are nodes
+     * 12 and 25, the bottom & top centers, respectively
      *
-     *   2--4--6--8
-     *   | /| /| /|
-     *   |/ |/ |/ |
-     *   1--3--5--7
-     *   |--|
-     *    ^
-     *   inc (degrees)
-     *
-     * returned array will contain 2*inc+2 Vector instances
+     *      13--14--15--16--17--18--19--20--21--22--23--24
+     *      :\  :\  :\  :\  :\  :\  :\  :\  :\  :\  :\  :\
+     *   .. : \ : \ : \ : \ : \ : \ : \ : \ : \ : \ : \ : \..
+     *     \:  \:  \:  \:  \:  \:  \:  \:  \:  \:  \:  \:
+     *      0---1---2---3---4---5---6---7---8---9---10--11
      */
     static getVectors(dz: number, r0: number, r1: number): Vector[] {
         return [
-            Cylinder.unitVerts.btm.cntr.copy(),
             ...Cylinder.unitVerts.btm.prmtr.map(vert => vert.scale(r0)),
-            Cylinder.unitVerts.top.cntr.scale(dz),
-            ...Cylinder.unitVerts.top.prmtr.map(vert => vert.scale([r1, r1, dz]))
+            Cylinder.unitVerts.btm.cntr.copy(),
+            ...Cylinder.unitVerts.top.prmtr.map(vert => vert.scale([r1, r1, dz])),
+            Cylinder.unitVerts.top.cntr.scale(dz)
         ];
     }
 
@@ -397,13 +404,17 @@ class Cylinder extends SpacecraftComponent {
         return this._r1;
     }
 
-    /** get an array of vertices forming the shape of this cylinder */
+    /** get an array of vertices forming the shape of this cylinder
+     *
+     * vertices are ordered as returned from Cylinder.getVectors(), i.e.
+     * bottom perimeter, bottom center, top perimeter, top center
+     */
     get vectorArray(): Vector[] {
         return this._verts.map(Vector.copy);
     }
 
-    /** get an array of *all* vertices and corresponding element array for a
-     * cylinder of given radius, height, and radial "resolution" (in degrees)
+    /** get an array of all vertices (including duplicates as necessary) and
+     * corresponding index array for this cylinder
      *
      * this method aims to minimize the number of copies made:
      *   1. only as many copies are made as *extra* instances are needed -
@@ -412,14 +423,11 @@ class Cylinder extends SpacecraftComponent {
      *      none of the top or bottom center vertices are duplicated (all
      *      elements that share any of those vertices are coplanar)
      *
-     * the resulting structure will contain 2 vertices (top and bottom centers)
-     * plus the following for each edge around the perimeter:
-     *    - 2 vertices for the top surface (1 element)
-     *    - 4 vertices for the side surface (2 elements)
-     *    - 2 vertices for the bottom surface (1 element)
-     *
-     * in total the returned object will contain (2+4+2)*n+2 Vector instances
-     * where n is the number of edges: n = 360 / inc
+     * in total the returned object will consist of:
+     *    - (2+4+2)*edgeCount+2 vertices (three 32-bit floats each)
+     *    - (2+4+2)*edgeCount+2 colors (four 32-bit floats each)
+     *    - (2+4+2)*edgeCount+2 normals (three 32-bit floats each)
+     *    - (1+2+1)*edgeCount element index arrays (three 16-bit u_ints each)
      */
     get elements(): DataIndex {
 
@@ -429,96 +437,65 @@ class Cylinder extends SpacecraftComponent {
         /*
             make a copy of each vertex for every non-coplanar face which shares
             that vertex
-         */
-        //  pull out the bottom & top centers (no need to duplicate those
-        //  as all the faces that share either one are coplanar)
-        //  they will be placed in the final vertex array in the same positions
-        let centers: Vector[] = vertices.splice(0, 2);
 
-        //  separate vertices by surface so copies can be made as necessary
-        //  note the order - bottom, side, top - must be consistent throughout
-        //  this method
-        let botVerts: Vector[] = [];
-        let sideVerts: Vector[] = [];let topVerts: Vector[] = [];
-
-        //  loop around the perimeter (note i+=2)
-        //  add copies of each vertex to the appropriate vertex arrays
-        //  make sure that vertex references wrap back around to the start of
-        //  of the vertices array in the final iteration
-        //  revisit - maybe should rethink calculating i2 & i3 on every
-        //      iteration (for performance reasons)
-        //      ...but then again it saves arithmetic ops in push() calls...
-        let i2: number, i3: number;
-        for(let i = 0; i < vertices.length; i += 2) {
-
-            //  for index-out-of-bounds safeguard
-            i2 = i + 2;
-            i3 = i + 3;
-
-            //  should only be true in the final iteration b/c i incremented
-            //  by 2
-            if(i3 >= vertices.length) {
-                //  i + 2 => 0 & i + 3 => 1
-                i2 = 0; //  (i+2)%vertices.length = 0
-                i3 = 1; //  (i+3)%vertices.length = 1
-            }
-
-            //  make all copies for the side at once
-            //  pass the originals to top & bottom (no need for more copies)
-            botVerts.push(vertices[i + 1], vertices[i3]);
-            sideVerts.push(...Vector.copy([vertices[i], vertices[i + 1],
-                vertices[i2], vertices[i3]]));
-            topVerts.push(vertices[i], vertices[i2]);
-        }
-
-        //  copies of all vertices have now been partitioned into either the
-        //  bottom, side, or top array
-
-        //  concat the resulting arrays into a final vertex array
-        let finalVerts: Vector[] = centers.concat(botVerts)
-                                          .concat(sideVerts)
-                                          .concat(topVerts);
-
-
-        /*
             record triplets of indices that group vertices into (triangular)
             elements
-        */
-        //  indices of bottom & top center vertices
-        const c0: number = 0;   //  bottom
-        const c1: number = 1;   //  top
+         */
 
-        //  indices of vertices grouped by element for bottom, side, and top
+        //  split vector array into separate top & bottom surface arrays
+        let topVerts: Vector[] = vertices.splice(vertices.length / 2);
+        let btmVerts: Vector[] = vertices;
+
+        //  create a separate array for copies of vertices for "side" surfaces
+        let sideVerts: Vector[] = [];
+
+        //  create separate arrays for element indices for top, bottom, and side
         //  surfaces
-        let bottom: [number, number, number][] = [];
-        let sides: [number, number, number][] = [];
-        let top: [number, number, number][] = [];
+        let btmInd: [number, number, number][] = [];
+        let sideInd: [number, number, number][] = [];
+        let topInd: [number, number, number][] = [];
 
+        //  loop around the perimeter
+        //  for each edge of the top/bottom surface disks (i.e. face of the side
+        //  surface), add copies of all four vertices to the sideVerts array in
+        //  alternating bottom/top order
         //  make sure that vertex references wrap back around to the start of
         //  of the vertices array in the final iteration
-        for(let i = 2; i < finalVerts.length; i += 2) {
+        const bCntr: number = Cylinder.edgeCount;
+        const tCntr: number = 2 * Cylinder.edgeCount + 1;
+        const sOffset: number = tCntr + 1;
+        let i1: number;
+        let fourI: number;
+        for(let i = 0; i < Cylinder.edgeCount; i += 1) {
 
-            //  for index-out-of-bounds safeguard
-            i2 = i + 2;
-            i3 = i + 3;
+            //  wrap the "next" index back to 0 on the final iteration
+            i1 = (i + 1) % Cylinder.edgeCount;
 
-            //  should only be true in the final iteration b/c i incremented
-            //  by 2
-            if(i3 >= finalVerts.length) {
-                //  i + 2 => 0 & i + 3 => 1
-                i2 = 0; //  (i+2)%vertices.length = 0
-                i3 = 1; //  (i+3)%vertices.length = 1
-            }
+            //  make copies for the side faces/elements
+            sideVerts.push(...Vector.copy(
+                [btmVerts[i], topVerts[i], btmVerts[i1], topVerts[i1]]
+            ));
 
-            //  add vector indices in groups of three
-            //  one triangular elements on bottom surface
-            //  two triangular elements on side surface
-            //  one triangular elements on top surface
-            //  node adjacent side elements drawn in same "direction" (cw)
-            bottom.push([c0, i, i2]);
-            sides.push([i, i + 1, i2], [i2, i + 1, i3]);
-            top.push([c1, i + 1, i3]);
+            //  populate element index arrays
+            //  reverse winding of the bottom surface elements
+            btmInd.push([bCntr, i, i1]);
+            topInd.push([tCntr, i1 + bCntr + 1, i + bCntr + 1]);
+
+            fourI = i * 4;
+            sideInd.push(
+                [fourI + sOffset, fourI + sOffset + 1, fourI + sOffset + 2],
+                [fourI + sOffset + 2, fourI + sOffset + 1, fourI + sOffset + 3]
+            );
         }
+
+        //  concat the resulting arrays into a final vertex array
+        let finalVerts: Vector[] = btmVerts.concat(topVerts).concat(sideVerts);
+
+        //  since the 3-vector vertices array will be flattened, each triplet
+        //  will start at an offset that is 3 times its position in these
+        //  intermediate arrays
+        //  account for this before mapping to final (flattened) index array
+        let finalInds: [number, number, number][] = btmInd.concat(topInd).concat(sideInd);
 
         //  REVISIT: FOR DEVELOPMENT THIS METHOD GROUPS VECTORS AND INDICES INTO
         //      NESTED ARRAYS AND FLATTENS THE FINAL ARRAYS BEFORE RETURNING
@@ -529,7 +506,7 @@ class Cylinder extends SpacecraftComponent {
             position: Float32Array.from(finalVerts.map(v => v.valueOf()).flat()),
             color: Float32Array.from([]),
             normal: Float32Array.from([]),
-            index: Uint16Array.from(bottom.concat(sides).concat(top).flat())
+            index: Uint16Array.from(finalInds.flat())
         };
     }
 
