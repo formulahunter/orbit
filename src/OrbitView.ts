@@ -96,13 +96,13 @@ class OrbitView {
     private vpSize: [number, number] = [-1, -1];
 
     /** field of view (in degrees) */
-    private _fov: number = 45 * DEG2RAD;
+    private _fov: number = 75 * DEG2RAD;
 
     /** camera position [x, y, z] */
-    private _pos: [number, number, number] = [0, 0, -16];
+    private _pos: [number, number, number] = [0, -10, -50];
 
      /** camera rotation about x, y, z axes (in degrees) */
-    private _rot: [number, number] = [0, 0];
+    private _rot: [number, number] = [90, 0];
 
     /** model scaling [x, y, z] (unitless)
      *
@@ -343,7 +343,7 @@ class OrbitView {
             //  the UNSIGNED SHORT type is 2 bytes
             const SIZEOF_USHORT: number = 2;
             let offset: number = 0;
-            let vertexCount: number = 144;
+            let vertexCount: number = 432;
             let type = this.wgl.UNSIGNED_SHORT;
             this.wgl.drawElements(this.wgl.TRIANGLES, vertexCount, type, offset * SIZEOF_USHORT);
         }
@@ -465,8 +465,7 @@ class OrbitView {
         //  center black node & 13 perimeter nodes blended from black to white
         let colors: number[] = [0.0, 0.0, 0.0, 1.0];  // bot/center always blk
         let shade: number;
-        //  number of edges + 1 node duplicated (also makes last shade 12/12=1)
-        for(let i = 0; i < edges + 1; i++) {
+        for(let i = 0; i < edges; i++) {
             shade = i / edges;
             colors.push(shade, shade, shade, 1.0);
         }
@@ -474,10 +473,18 @@ class OrbitView {
         colors = colors.concat(colors.slice());
 
         //  alternate *pairs* of vertices between black & white
-        for(let i = 0; i < edges + 1; i++) {
+        for(let i = 0; i < edges; i++) {
             shade = i % 2.0;
-            colors.push(shade, shade, shade, 1.0, shade, shade, shade, 1.0);
+            colors.push(
+                shade, shade, shade, 1.0,
+                shade, shade, shade, 1.0,
+                1 - shade, 1 - shade, 1 - shade, 1.0,
+                1 - shade, 1 - shade, 1 - shade, 1.0
+            );
         }
+
+        //  add two more copies for the 2nd & third components
+        colors = colors.concat(colors.slice()).concat(colors.slice());
         console.debug('final color array: %o', colors);
 
 

@@ -80,9 +80,18 @@ class Spacecraft extends GraphicsElement {
         super();
 
         this._name = name;
-        this.addComponent(new Cylinder(6, 2));
-        // console.log('cylinder elements: %o', this.getComponent().elements);
-        // console.log('removed component: %o', this.removeComponent(0));
+
+        //  build a basic structure
+        let engine = new Cylinder(1, 1, 0.25);
+        this.addComponent(engine);
+
+        let booster = new Cylinder(8, 2);
+        booster.pos = new Vector(0, 0, 1);
+        this.addComponent(booster);
+
+        let payload = new Cylinder(2, 2, 0.5);
+        payload.pos = new Vector(0, 0, 9);
+        this.addComponent(payload);
     }
 
     get name(): string {
@@ -163,12 +172,14 @@ class Spacecraft extends GraphicsElement {
             normal: 0,
             index: 0
         };
-        for(let comp of compElements) {
+        let comp: DataIndex;
+        for(let i = 0; i < compElements.length; ++i) {
+            comp = compElements[i];
             //  add comp's data to aggregate arrays
             elements.position.set(comp.position, offset.position);
             elements.color.set(comp.color, offset.color);
             elements.normal.set(comp.normal, offset.normal);
-            elements.index.set(comp.index.map(ind => ind + offset.index), offset.index);
+            elements.index.set(comp.index.map(ind => ind + offset.position / 3), offset.index);
 
             //  update offsets
             offset.position += comp.position.length;
@@ -200,7 +211,7 @@ class Spacecraft extends GraphicsElement {
     addComponent(comp: SpacecraftComponent): number {
 
         let ind: number = this._components.indexOf(comp);
-        if(ind < 0) {
+        if(ind >= 0) {
             this._components.splice(ind, 1);
         }
 
