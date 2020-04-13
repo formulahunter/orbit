@@ -333,6 +333,12 @@ class Vector implements Cartesian3D, Spherical3D {
         return new Vector(this.x * s, this.y * s, this.z * s);
     }
 
+    /** get a new vector with components equal to the sum of this
+     *  vector's components and those of the given vector */
+    add(v: Vector): Vector {
+        return new Vector(this.x + v.x, this.y + v.y, this.z + v.z);
+    }
+
     /** get a new vector with components equal to this vector's components */
     copy() : Vector {
         return new Vector(this.x, this.y, this.z);
