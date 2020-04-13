@@ -249,6 +249,12 @@ abstract class SpacecraftComponent extends GraphicsElement {
         return Vector.copy(this._pos);
     }
 
+    /** get the component's position vector wrt the spacecraft's reference
+     * frame */
+    set pos(p: Vector) {
+        this._pos = p;
+    }
+
     /** get an array of geometric vertices as vectors */
     abstract get vectorArray(): Vector[];
 
@@ -410,7 +416,7 @@ class Cylinder extends SpacecraftComponent {
      * bottom perimeter, bottom center, top perimeter, top center
      */
     get vectorArray(): Vector[] {
-        return this._verts.map(Vector.copy);
+        return this._verts.map(v => v.add(this.pos));
     }
 
     /** get an array of all vertices (including duplicates as necessary) and
