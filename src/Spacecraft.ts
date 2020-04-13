@@ -146,46 +146,38 @@ class Spacecraft extends GraphicsElement {
     get elements(): DataIndex {
 
         let compElements: DataIndex[] = [];
-        let counts: {[key in keyof DataIndex]: number} = {
-            position: 0,
-            color: 0,
-            normal: 0,
-            index: 0
+        let counts = {
+            vertex: 0,
+            index: 0,
         };
         for(let i = 0; i < this._components.length; ++i) {
             compElements.push(this.getComponent(i).elements);
-            counts.position += compElements[i].position.length;
-            counts.color += compElements[i].color.length;
-            counts.normal += compElements[i].normal.length;
-            counts.index += compElements[i].index.length;
+            counts.vertex += compElements[i].vertCount;
+            counts.index += compElements[i].indCount;
         }
 
         let elements: DataIndex = {
-            position: new Float32Array(counts.position),
-            color: new Float32Array(counts.color),
-            normal: new Float32Array(counts.normal),
+            vertCount: 0,
+            indCount: 0,
+            position: new Float32Array(3 * counts.vertex),
+            color: new Float32Array(4 * counts.vertex),
+            normal: new Float32Array(0),                    //  temp until normals defined
             index: new Uint16Array(counts.index)
-        };
-        let offset: {[key in keyof DataIndex]: number} = {
-            position: 0,
-            color: 0,
-            normal: 0,
-            index: 0
         };
         let comp: DataIndex;
         for(let i = 0; i < compElements.length; ++i) {
             comp = compElements[i];
-            //  add comp's data to aggregate arrays
-            elements.position.set(comp.position, offset.position);
-            elements.color.set(comp.color, offset.color);
-            elements.normal.set(comp.normal, offset.normal);
-            elements.index.set(comp.index.map(ind => ind + offset.position / 3), offset.index);
 
-            //  update offsets
-            offset.position += comp.position.length;
-            offset.color += comp.color.length;
-            offset.normal += comp.normal.length;
-            offset.index += comp.index.length;
+            //  first add comp's data to aggregate arrays using accumulated
+            //  counts as offsets
+            elements.position.set(comp.position, 3 * elements.vertCount);
+            elements.color.set(comp.color, 4 * elements.vertCount);
+            elements.normal.set(comp.normal, /*3 * elements.vertCount*/ 0);
+            elements.index.set(comp.index.map(ind => ind + elements.vertCount), elements.indCount);
+
+            //  now update counts for next iteration
+            elements.vertCount += comp.vertCount;
+            elements.indCount += comp.indCount;
         }
 
         return elements;
@@ -512,7 +504,7 @@ class Cylinder extends SpacecraftComponent {
         //  will start at an offset that is 3 times its position in these
         //  intermediate arrays
         //  account for this before mapping to final (flattened) index array
-        let finalInds: [number, number, number][] = btmInd.concat(topInd).concat(sideInd);
+        let finalInds: number[] = btmInd.concat(topInd).concat(sideInd).flat();
 
         //  generate colors in-house
         let colors: number[][] = [];
@@ -551,10 +543,12 @@ class Cylinder extends SpacecraftComponent {
         //      ALSO, ELIMINATE INTERMEDIATE ARRAYS AND COMPILE VERT & ELEMENT
         //      ARRAYS INCREMENTALLY
         return {
+            vertCount: finalVerts.length,
+            indCount: finalInds.length,
             position: Float32Array.from(finalVerts.map(v => v.valueOf()).flat()),
             color: Float32Array.from(finalColors.flat()),
             normal: Float32Array.from([]),
-            index: Uint16Array.from(finalInds.flat())
+            index: Uint16Array.from(finalInds)
         };
     }
 

@@ -34,9 +34,14 @@ type ShaderProgramInfo = {
         [uni: string]: WebGLUniformLocation | null
     }
 };
-type BufferIndex = {
-    [buf: string]: WebGLBuffer
-};
+interface BufferIndex {
+    vertCount: number,
+    indCount: number,
+    position: WebGLBuffer,
+    color: WebGLBuffer,
+    normal?: WebGLBuffer,   //  temp until normals implemented
+    index: WebGLBuffer
+}
 
 /** vertex shader source code */
 const vsSource = `
@@ -330,7 +335,7 @@ class OrbitView {
             modelViewMatrix
         );
 
-        this.wgl.bindBuffer(this.wgl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+        this.wgl.bindBuffer(this.wgl.ELEMENT_ARRAY_BUFFER, buffers.index);
 
         //  all element arrays must be generated for drawing in 'separate
         //  triangles' mode
@@ -343,7 +348,7 @@ class OrbitView {
             //  the UNSIGNED SHORT type is 2 bytes
             const SIZEOF_USHORT: number = 2;
             let offset: number = 0;
-            let vertexCount: number = 432;
+            let vertexCount: number = buffers.indCount;
             let type = this.wgl.UNSIGNED_SHORT;
             this.wgl.drawElements(this.wgl.TRIANGLES, vertexCount, type, offset * SIZEOF_USHORT);
         }
@@ -478,9 +483,11 @@ class OrbitView {
         );
 
         return {
+            vertCount: elements.vertCount,
+            indCount: elements.indCount,
             position: positionBuffer,
             color: colorBuffer,
-            indices: indexBuffer
+            index: indexBuffer
         };
     }
 
