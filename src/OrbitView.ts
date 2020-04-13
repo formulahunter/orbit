@@ -9,9 +9,21 @@
  * [1] https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices
  *
  */
+/**
+ * general projection/perspective transform resources
+ * all in/directly linked from MDN's "WebGL model view projection" article:
+ *  - https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_model_view_projection#Perspective_matrix
+ *
+ * https://webglfundamentals.org/webgl/lessons/webgl-3d-perspective.html
+ * http://ogldev.atspace.co.uk/www/tutorial12/tutorial12.html
+ * https://stackoverflow.com/questions/28286057/trying-to-understand-the-math-behind-the-perspective-matrix-in-webgl/28301213#28301213
+ * https://unspecified.wordpress.com/2012/06/21/calculating-the-gluperspective-matrix-and-other-opengl-matrix-maths/
+ * http://www.songho.ca/opengl/gl_projectionmatrix.html
+ */
 //@ts-ignore
 import {mat4} from '../ext/gl-matrix/index.js';
 import {DataIndex} from './rendering/DataIndex.js';
+import {DEG2RAD} from './constants.js';
 
 type ShaderProgramInfo = {
     program: WebGLProgram,
@@ -22,9 +34,14 @@ type ShaderProgramInfo = {
         [uni: string]: WebGLUniformLocation | null
     }
 };
-type BufferIndex = {
-    [buf: string]: WebGLBuffer
-};
+interface BufferIndex {
+    vertCount: number,
+    indCount: number,
+    position: WebGLBuffer,
+    color: WebGLBuffer,
+    normal?: WebGLBuffer,   //  temp until normals implemented
+    index: WebGLBuffer
+}
 
 /** vertex shader source code */
 const vsSource = `
@@ -54,6 +71,26 @@ const fsSource = `
 /** the OrbitView class is the game's rendering engine. its objective is to
  * to extract essential model data and load it into buffers for processing in
  * WebGL.
+ *
+ * the addition of the Camera API and extensions allows the viewing position &
+ * direction to be modified view the WebConsole. it includes a core API that
+ * provides transparent write access to the parameters used to derive the
+ * model/view/projection matrices used by WebGL. these methods do not
+ * automatically invoke drawScene() and so should be preferred when multiple
+ * transforms are applied in succession (e.g. both translation and rotation).
+ * they expect array arguments consisting of all relevant values - e.g.
+ * [x, y, z] for translation - even if some values will not be changed (zoom
+ * is the exception since its corresponding property, _fov, is a scalar)
+ *
+ * the extension methods are meant to simplify the WebConsole-based interface.
+ * They modify individual parameters/dimensions, accepting optional increment
+ * arguments, and cause the scene to be redrawn automatically.
+ *
+ * note on view coordinate space: WebGL's default coordinate space is aligned in
+ *  a semi-unintuitive way by default (and for good reason). Any coordinate
+ *  transforms applied do not change this, so any adjustments to camera position
+ *  and orientation must be applied with respect to the original coordinate
+ *  basis.
  */
 class OrbitView {
 
@@ -62,6 +99,30 @@ class OrbitView {
 
     /** viewport size (canvas element's clientHeight and clientWidth) */
     private vpSize: [number, number] = [-1, -1];
+
+    /** field of view (in degrees) */
+    private _fov: number = 75 * DEG2RAD;
+
+    /** camera position [x, y, z] */
+    private _pos: [number, number, number] = [0, -10, -50];
+
+     /** camera rotation about x, y, z axes (in degrees) */
+    private _rot: [number, number] = [90, 0];
+
+    /** model scaling [x, y, z] (unitless)
+     *
+     * z scale should always be negative by default (convert to right-handed
+     * coordinate system). this is implemented automatically in when computing
+     * the mvp matrix
+     *  - https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_model_view_projection#Perspective_matrix
+     */
+    private _scale: [number, number, number] = [3, 3, 3];
+
+    /** shader program, uniform & attribute info */
+    private _programInfo?: ShaderProgramInfo;
+
+    /** final WebGLBuffers (vertex position, color, normal, index, etc) */
+    private _buffers?: BufferIndex;
 
     /** WebGL rendering context
      * Consider possible benefits of using a WebGL2RenderingContext if/when
@@ -98,10 +159,6 @@ class OrbitView {
     /** initialize the game - simulation time, planets, spacecraft etc. - and
      * return 0 on success, -1 on failure
      *
-     * this particular implementation of the init() method is based on MDN's
-     * WebGL tutorial, and specifically on the section titled 'Using shaders to
-     * apply color in WebGL'
-     *
      * https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Tutorial/Using_shaders_to_apply_color_in_WebGL
      */
     init(elements: DataIndex): number {
@@ -136,6 +193,7 @@ class OrbitView {
                 ' program: %o', programInfo.uniforms);
             throw new TypeError('invalid shader program uniform location');
         }
+        this._programInfo = programInfo;
 
         //  initialize the position buffer with the square's vertex coordinates
         let buffers: BufferIndex;
@@ -146,19 +204,30 @@ class OrbitView {
             console.error(`error initializing buffers: ${er.toString()}`);
             return -1;
         }
+        this._buffers = buffers;
 
         //  draw the scene
-        this.drawScene(programInfo, buffers);
+        this.drawScene();
 
         return 0;
     }
 
 
-    /** draw the scene's current state
+    /** draw the scene's current state using static/unchanging scene data and
+     * model/view/projection transforms derived from respective properties
      *
-     * THIS IMPLEMENTATION ASSUMES A CYLINDRICAL SHAPE WITH EXACTLY 12 EDGES
+     * @throws {TypeError} 'invalid_rendering_resources' if either _programInfo
+     *          or _buffers is undefined
      */
-    drawScene(programInfo: ShaderProgramInfo, buffers: BufferIndex): void {
+    drawScene(): void {
+
+        if(this._programInfo === undefined || this._buffers === undefined) {
+            console.debug('cannot draw scene with undefined _programInfo' +
+                ' and/or _buffers');
+            throw new TypeError('invalid_rendering_resources');
+        }
+        const programInfo = this._programInfo;
+        const buffers = this._buffers;
 
         this.wgl.viewport(0, 0, this.vpSize[0], this.vpSize[1]);
 
@@ -179,26 +248,24 @@ class OrbitView {
         //  define the field of view, aspect ratio, and near and far z-bounds
         //  these parameters will be used to calculate elements in a 4x4
         //  projection matrix
-        let fov: number = 45 * Math.PI / 180;   // in radians
         let aspect: number = this.vpSize[0] / this.vpSize[1];
         let zNear: number = 0.1;
         let zFar: number = 100.0;
 
         //  create a perspective matrix and calculate its elements
         const projectionMatrix: mat4 = mat4.create();
-        mat4.perspective(projectionMatrix, fov, aspect, zNear, zFar);
+        mat4.perspective(projectionMatrix, this._fov, aspect, zNear, zFar);
 
-        //  create a matrix where the square should be drawn and offset it
-        //  slightly from the origin (mat4.create() returns a new 4x4 identity
-        //  matrix)
-        //  not sure why MDN shows explicit floats or the negative zero?
+        //  the modelViewMatrix combines operations for the model and view
+        //  coordinate transforms
+        //  this is likely to be refactored/expanded upon, especially when more
+        //  work on the camera interface is undertaken
         const modelViewMatrix: mat4 = mat4.create();
-        mat4.translate(modelViewMatrix,     //  destination matrix
-            modelViewMatrix,    //  source matrix
-            [-0.0, 0.0, -16.0]);  //  amount to translate
-        mat4.rotateX(modelViewMatrix, modelViewMatrix, 3 * Math.PI / 8);
-        mat4.rotateZ(modelViewMatrix, modelViewMatrix, 3 * Math.PI / 4);
-        mat4.scale(modelViewMatrix, modelViewMatrix, [3.0, 3.0, 3.0]);
+        mat4.translate(modelViewMatrix, modelViewMatrix, this._pos);  //  amount to translate
+        mat4.rotateX(modelViewMatrix, modelViewMatrix, this._rot[0] * DEG2RAD);
+        mat4.rotateY(modelViewMatrix, modelViewMatrix, this._rot[1] * DEG2RAD);
+        mat4.scale(modelViewMatrix, modelViewMatrix, this._scale);
+        mat4.scale(modelViewMatrix, modelViewMatrix, [1, 1, -1]);
 
         //  describe exactly what the values entered into the position buffer
         //  are (i.e. each "position" defined in initBuffers() is a pair of
@@ -265,9 +332,12 @@ class OrbitView {
             modelViewMatrix
         );
 
-        this.wgl.bindBuffer(this.wgl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+        this.wgl.bindBuffer(this.wgl.ELEMENT_ARRAY_BUFFER, buffers.index);
 
-        //  draw the bottom and top surfaces as triangle fans
+        //  all element arrays must be generated for drawing in 'separate
+        //  triangles' mode
+        //  this reduces the number of calls to wgl.drawElements(), which would
+        //  otherwise (possibly) make rendering significantly slower
         {
             //  draw top surface
             //  the offset argument must be a multiple of the size of the data
@@ -275,22 +345,9 @@ class OrbitView {
             //  the UNSIGNED SHORT type is 2 bytes
             const SIZEOF_USHORT: number = 2;
             let offset: number = 0;
-            let vertexCount: number = 14;
+            let vertexCount: number = buffers.indCount;
             let type = this.wgl.UNSIGNED_SHORT;
-            this.wgl.drawElements(this.wgl.TRIANGLE_FAN, vertexCount, type, offset * SIZEOF_USHORT);
-
-            // draw bottom surface
-            offset = 14;
-            this.wgl.drawElements(this.wgl.TRIANGLE_FAN, vertexCount, type, offset * SIZEOF_USHORT);
-        }
-
-        //  draw the side surfaces as a triangle strip
-        {
-            const SIZEOF_USHORT: number = 2;
-            let offset: number = 28;
-            let vertexCount: number = 26;
-            let type: GLenum = this.wgl.UNSIGNED_SHORT;
-            this.wgl.drawElements(this.wgl.TRIANGLE_STRIP, vertexCount, type, offset * SIZEOF_USHORT);
+            this.wgl.drawElements(this.wgl.TRIANGLES, vertexCount, type, offset * SIZEOF_USHORT);
         }
     }
 
@@ -384,6 +441,7 @@ class OrbitView {
         //  get vertex & element arrays for the craft
         console.debug('final vertices array: %o', elements.position);
         console.debug('final indices array: %o', elements.index);
+        console.debug('final color array: %o', elements.color);
 
         //  fill the array buffer with a typed array derived from the positions
         //  array previously defined
@@ -395,36 +453,8 @@ class OrbitView {
         //  see https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bufferData
         this.wgl.bufferData(this.wgl.ARRAY_BUFFER,
             elements.position,
-            this.wgl.STATIC_DRAW);
-
-        //  define color sequences for the top/bottom and side surfaces
-        //  top/bottom surfaces drawn with a conic gradient where theta=0 is
-        //  black, theta=2pi is white, and the center vertex is black
-        //  side vertices alternate between white & black: each pair of top
-        //  & bottom vertex is assigned the opposite color as the previous,
-        //  with the possible exception of the vertices @ theta=0 in the case
-        //  that the number of edges is odd
-        const edges = 12;
-
-        //  start with the top surface
-        //  center black node & 13 perimeter nodes blended from black to white
-        let colors: number[] = [0.0, 0.0, 0.0, 1.0];  // bot/center always blk
-        let shade: number;
-        //  number of edges + 1 node duplicated (also makes last shade 12/12=1)
-        for(let i = 0; i < edges + 1; i++) {
-            shade = i / edges;
-            colors.push(shade, shade, shade, 1.0);
-        }
-        //  add another copy of this gradient for the bottom surface
-        colors = colors.concat(colors.slice());
-
-        //  alternate *pairs* of vertices between black & white
-        for(let i = 0; i < edges + 1; i++) {
-            shade = i % 2.0;
-            colors.push(shade, shade, shade, 1.0, shade, shade, shade, 1.0);
-        }
-        console.debug('final color array: %o', colors);
-
+            this.wgl.STATIC_DRAW
+        );
 
         const colorBuffer: WebGLBuffer | null = this.wgl.createBuffer();
         if(!(colorBuffer instanceof WebGLBuffer)) {
@@ -434,8 +464,9 @@ class OrbitView {
         }
         this.wgl.bindBuffer(this.wgl.ARRAY_BUFFER, colorBuffer);
         this.wgl.bufferData(this.wgl.ARRAY_BUFFER,
-            Float32Array.from(colors),
-            this.wgl.STATIC_DRAW);
+            Float32Array.from(elements.color),
+            this.wgl.STATIC_DRAW
+        );
 
         const indexBuffer = this.wgl.createBuffer();
         if(!(indexBuffer instanceof WebGLBuffer)) {
@@ -446,13 +477,184 @@ class OrbitView {
         this.wgl.bindBuffer(this.wgl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         this.wgl.bufferData(this.wgl.ELEMENT_ARRAY_BUFFER,
             elements.index,
-            this.wgl.STATIC_DRAW);
+            this.wgl.STATIC_DRAW
+        );
 
         return {
+            vertCount: elements.vertCount,
+            indCount: elements.indCount,
             position: positionBuffer,
             color: colorBuffer,
-            indices: indexBuffer
+            index: indexBuffer
         };
+    }
+
+    /** set the modelView's translation
+     *
+     * part of the core Camera API, which must be used for any compound
+     * transformations involving more than one of translating, rotating, and
+     * scaling - using multiple calls to non-core methods will result in
+     * excessive/redundant drawScene() calls
+     */
+    translate(dest: [number, number, number]): void {
+        this._pos = dest;
+    }
+
+    /** set the modelView's rotation transform
+     *
+     * part of the core Camera API, which must be used for any compound
+     * transformations involving more than one of translating, rotating, and
+     * scaling - using multiple calls to non-core methods will result in
+     * excessive/redundant drawScene() calls
+     */
+    rotate(dir: [number, number]): void {
+        this._rot = dir;
+    }
+
+    /** set the modelView's scale
+     *
+     * part of the core Camera API, which must be used for any compound
+     * transformations involving more than one of translating, rotating, and
+     * scaling - using multiple calls to non-core methods will result in
+     * excessive/redundant drawScene() calls
+     */
+    scale(s: [number, number, number]): void {
+        this._scale = s;
+    }
+
+    /** set the projectionView's field of view (degrees)
+     *
+     * part of the core Camera API, which must be used for any compound
+     * transformations involving more than one of translating, rotating, and
+     * scaling - using multiple calls to non-core methods will result in
+     * excessive/redundant drawScene() calls
+     */
+    zoom(angle: number): void {
+        this._fov = angle;
+    }
+
+    /** translate the modelView matrix by the given offset [x, y, z]
+     * automatically redraws the scene
+     *
+     * part of the core Camera API, which must be used for any compound
+     * transformations involving more than one of translating, rotating, and
+     * scaling - using multiple calls to non-core methods will result in
+     * excessive/redundant drawScene() calls
+     */
+    moveBy(offset: [number, number, number]): void {
+        this.translate(this._pos.map((el, ind) => {
+            return el + offset[ind];
+        }) as [number, number, number]);
+    }
+
+    /** add the given angles to the current rotation about each axis [x, y, z]
+     *
+     * part of the core Camera API, which must be used for any compound
+     * transformations involving more than one of translating, rotating, and
+     * scaling - using multiple calls to non-core methods will result in
+     * excessive/redundant drawScene() calls
+     */
+    turnBy(offset: [number, number]): void {
+        this.rotate(this._rot.map((el, ind) => {
+            return el + offset[ind];
+        }) as [number, number]);
+    }
+
+    /** change the scaling on each axis by the given factors [x, y, z]
+     * in general scaling will probably be uniform on all three axes, but
+     * leaving the option anyway
+     *
+     * part of the core Camera API, which must be used for any compound
+     * transformations involving more than one of translating, rotating, and
+     * scaling - using multiple calls to non-core methods will result in
+     * excessive/redundant drawScene() calls
+     */
+    scaleBy(factors: [number, number, number]): void {
+        this.scale(this._scale.map((el, ind) => {
+            return el * factors[ind];
+        }) as [number, number, number]);
+    }
+
+    /** translate the modelView by the given distance in the positive z
+     * direction */
+    moveUp(dist: number = 1): void {
+        this._pos[1] -= dist;
+        this.drawScene();
+    }
+
+    /** translate the modelView by the given distance in the negative z
+     * direction */
+    moveDn(dist: number = 1): void {
+        this._pos[1] += dist;
+        this.drawScene();
+    }
+
+    /** translate the modelView by the given distance in the positive x
+     * direction */
+    moveRt(dist: number = 1): void {
+        this._pos[0] -= dist;
+        this.drawScene();
+    }
+
+    /** translate the modelView by the given distance in the negative x
+     * direction */
+    moveLf(dist: number = 1): void {
+        this._pos[0] += dist;
+        this.drawScene();
+    }
+
+    /** translate the modelView by the given distance in the positive y
+     * direction */
+    moveFw(dist: number = 1): void {
+        this._pos[2] += dist;
+        this.drawScene();
+    }
+
+    /** translate the modelView by the given distance in the negative y
+     * direction */
+    moveBk(dist: number = 1): void {
+        this._pos[2] -= dist;
+        this.drawScene();
+    }
+
+    /** move the camera's right ascension by the given angle in the positive
+     * direction */
+    spinUp(angle: number = 5): void {
+        this._rot[0] -= angle;
+        this.drawScene();
+    }
+
+    /** move the camera's right ascension by the given angle in the positive
+     * direction */
+    spinDn(angle: number = 5): void {
+        this._rot[0] += angle;
+        this.drawScene();
+    }
+
+    /** move the camera's longitude by the given angle in the positive
+     * direction */
+    spinLf(angle: number = 5): void {
+        this._rot[1] -= angle;
+        this.drawScene();
+    }
+
+    /** move the camera's longitude by the given angle in the negative
+     * direction */
+    spinRt(angle: number = 5): void {
+        this._rot[1] += angle;
+        this.drawScene();
+    }
+
+    /** narrow the projection transform's field of view (degrees) */
+    zoomIn(angle: number = 10): void {
+        this._fov -= angle * DEG2RAD;
+        this.drawScene();
+    }
+
+    /** widen the projection transform's field of view (degrees) */
+    zoomOut(angle: number = 10): void {
+        this._fov += angle * DEG2RAD;
+        this.drawScene();
     }
 }
 

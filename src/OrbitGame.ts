@@ -5,6 +5,7 @@
 import {OrbitView} from './OrbitView.js';
 import {sim, getCraft, addCraft, initSim} from './sim.js';
 import {Spacecraft} from './Spacecraft.js';
+import {DataIndex} from './rendering/DataIndex.js';
 
 class OrbitGame {
 
@@ -18,9 +19,14 @@ class OrbitGame {
      */
     constructor() {
 
+        //@ts-ignore
+        window.game = this;
+
         //  the OrbitView constructor is responsible for searching for its
         //  <canvas> element
         this.view = new OrbitView();
+        //@ts-ignore
+        window.v = this.view;
     }
 
     /** initialize the game - load the last saved simulation state, initialize
@@ -46,7 +52,7 @@ class OrbitGame {
 
         //  initialize the rendering interface with element/vertex data to be
         //  rendered
-        let elements = getCraft().elements;
+        let elements: DataIndex = getCraft().elements;
         this.view.init(elements);
 
         //  run the sim

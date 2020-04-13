@@ -219,6 +219,9 @@
  * [2] https://en.wikipedia.org/wiki/Duality_(projective_geometry)
  * [3] https://en.wikipedia.org/wiki/Transformation_matrix#Affine_transformations
  * [4] https://en.wikipedia.org/wiki/Linear_map
+ *
+ * possibly useful analysis of converting between rotation reference frames:
+ * https://www.euclideanspace.com/maths/geometry/rotations/euler/indexLocal.htm
  */
 /**
  * TODO - check for reasonable length of Vector component strings
