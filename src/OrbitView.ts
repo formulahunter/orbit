@@ -439,6 +439,7 @@ class OrbitView {
         //  get vertex & element arrays for the craft
         console.debug('final vertices array: %o', elements.position);
         console.debug('final indices array: %o', elements.index);
+        console.debug('final color array: %o', elements.color);
 
         //  fill the array buffer with a typed array derived from the positions
         //  array previously defined
@@ -452,42 +453,6 @@ class OrbitView {
             elements.position,
             this.wgl.STATIC_DRAW);
 
-        //  define color sequences for the top/bottom and side surfaces
-        //  top/bottom surfaces drawn with a conic gradient where theta=0 is
-        //  black, theta=2pi is white, and the center vertex is black
-        //  side vertices alternate between white & black: each pair of top
-        //  & bottom vertex is assigned the opposite color as the previous,
-        //  with the possible exception of the vertices @ theta=0 in the case
-        //  that the number of edges is odd
-        const edges = 12;
-
-        //  start with the top surface
-        //  center black node & 13 perimeter nodes blended from black to white
-        let colors: number[] = [0.0, 0.0, 0.0, 1.0];  // bot/center always blk
-        let shade: number;
-        for(let i = 0; i < edges; i++) {
-            shade = i / edges;
-            colors.push(shade, shade, shade, 1.0);
-        }
-        //  add another copy of this gradient for the bottom surface
-        colors = colors.concat(colors.slice());
-
-        //  alternate *pairs* of vertices between black & white
-        for(let i = 0; i < edges; i++) {
-            shade = i % 2.0;
-            colors.push(
-                shade, shade, shade, 1.0,
-                shade, shade, shade, 1.0,
-                1 - shade, 1 - shade, 1 - shade, 1.0,
-                1 - shade, 1 - shade, 1 - shade, 1.0
-            );
-        }
-
-        //  add two more copies for the 2nd & third components
-        colors = colors.concat(colors.slice()).concat(colors.slice());
-        console.debug('final color array: %o', colors);
-
-
         const colorBuffer: WebGLBuffer | null = this.wgl.createBuffer();
         if(!(colorBuffer instanceof WebGLBuffer)) {
             console.debug('invalid buffer returned from wgl.createBuffer():' +
@@ -496,8 +461,9 @@ class OrbitView {
         }
         this.wgl.bindBuffer(this.wgl.ARRAY_BUFFER, colorBuffer);
         this.wgl.bufferData(this.wgl.ARRAY_BUFFER,
-            Float32Array.from(colors),
-            this.wgl.STATIC_DRAW);
+            Float32Array.from(elements.color),
+            this.wgl.STATIC_DRAW
+        );
 
         const indexBuffer = this.wgl.createBuffer();
         if(!(indexBuffer instanceof WebGLBuffer)) {
@@ -508,7 +474,8 @@ class OrbitView {
         this.wgl.bindBuffer(this.wgl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         this.wgl.bufferData(this.wgl.ELEMENT_ARRAY_BUFFER,
             elements.index,
-            this.wgl.STATIC_DRAW);
+            this.wgl.STATIC_DRAW
+        );
 
         return {
             position: positionBuffer,

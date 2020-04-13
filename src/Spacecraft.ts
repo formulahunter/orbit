@@ -56,7 +56,7 @@
 import {GraphicsElement} from './rendering/GraphicsElement.js';
 import {Vector} from './geometry/Vector.js';
 import {DataIndex} from './rendering/DataIndex.js';
-import {TWO_PI} from './constants.js';
+import {PI, TWO_PI} from './constants.js';
 
 
 class Spacecraft extends GraphicsElement {
@@ -514,6 +514,37 @@ class Cylinder extends SpacecraftComponent {
         //  account for this before mapping to final (flattened) index array
         let finalInds: [number, number, number][] = btmInd.concat(topInd).concat(sideInd);
 
+        //  generate colors in-house
+        let colors: number[][] = [];
+        for(let i = 0; i < Cylinder.edgeCount; ++i) {
+
+            let theta = (i / btmVerts.length) * PI;
+            let r: number = Math.sin(theta);
+            let g: number = Math.sin(theta + PI / 3);
+            let b: number = Math.sin(theta + 2 * PI / 3);
+            colors.push([r, g, b, 1.0]);
+        }
+
+        //  initialize finalColors with two copies of colors (btm & top
+        //  surfaces)
+        let finalColors: number[][] = colors.concat(colors.slice());
+
+        //  add colors for side vertices
+        let i2: number;
+        for(let i = 0; i < Cylinder.edgeCount; ++i) {
+
+            //  wrap the "next" index back to 0 on the final iteration
+            i1 = (i + 1) % Cylinder.edgeCount;
+            i2 = (i + 2) % Cylinder.edgeCount;
+
+            finalColors.push(
+                colors[i],
+                colors[i1],
+                colors[i1],
+                colors[i2]
+            );
+        }
+
         //  REVISIT: FOR DEVELOPMENT THIS METHOD GROUPS VECTORS AND INDICES INTO
         //      NESTED ARRAYS AND FLATTENS THE FINAL ARRAYS BEFORE RETURNING
         //      THESE REDUNDANT STEPS SHOULD BE REMOVED AFTER SUFFICIENT TESTING
@@ -521,7 +552,7 @@ class Cylinder extends SpacecraftComponent {
         //      ARRAYS INCREMENTALLY
         return {
             position: Float32Array.from(finalVerts.map(v => v.valueOf()).flat()),
-            color: Float32Array.from([]),
+            color: Float32Array.from(finalColors.flat()),
             normal: Float32Array.from([]),
             index: Uint16Array.from(finalInds.flat())
         };
