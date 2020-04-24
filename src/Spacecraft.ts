@@ -1,63 +1,16 @@
-/** Spacecraft
+/** Spacecraft class
  *
  * Spacecraft are directly controlled by the player and can be configured to
  * optimize performance under given conditions. Multiple spacecraft can be
  * simulated at the same time (although the player can control only one at a
  * time, referred to as the "active" craft).
  */
-/**
- * Parameters that determine a spacecraft's state
- *      orbital:
- *        - host body (reference planet/star)
- *        - orbital state vector @t, s
- *          - position vector, r_t {x, y, z}
- *          - velocity vector, v_t {vx, vy, vz}
- *
- *      inertial:
- *        - empty mass, me
- *        - propellant (fuel) mass, mf
- *        - payload mass, mp
- *        - center of mass, CM
- *        - center of thrust, CT
- *        - center of pressure, CP
- *        - angular moment of inertia,
- *
- *
- * Other parameters (can be derived from those above)
- *      inertial:
- *        - total mass, m
- *
- *      orbital:
- *        - semi-major axis, μ (small mu)
- *        - semi-minor axis, ν (small nu)
- *        - longitude of ascending node, Ω (capital omega)
- *        - inclination, ι (small iota)
- *        - argument of periapsis, ω (small omega)
- *        - true anomaly, γ (small gamma)
- *        - orbital period, T
- *
- *      geometric:
- *        - normal of ascent (from central body)
- *        - normal of orbital plane
- */
-/**
- * Thrust calculations
- * For now, assuming that thrust vector is coincident with craft centerline (as
- * is CM and CP). More realistic would be to give each engine a thrust vector
- * (actually a tensor of one 3-vector and one scalar).
- */
-/**
- * Rationale for property accessors
- * This class defines private properties and public accessor methods, e.g. for
- * mass components, as an OOP best practice and, more importantly, because they
- * will likely be needed to trigger related changes when their private values
- * are modified (thrust-to-weight ratio in the GUI, for example).
- */
+import {Cylinder} from './Cylinder.js';
 import {GraphicsElement} from './rendering/GraphicsElement.js';
 import {getTrueAnomAt, KeplerianElements} from './sim.js';
 import {Vector} from './geometry/Vector.js';
 import {DataIndex} from './rendering/DataIndex.js';
-import {PI, TWO_PI} from './constants.js';
+import {SpacecraftComponent} from './SpacecraftComponent.js';
 
 
 class Spacecraft extends GraphicsElement {
@@ -79,11 +32,6 @@ class Spacecraft extends GraphicsElement {
     /** primitive 3D geometric components making up the form of the
      * spacecraft */
     private _components: SpacecraftComponent[] = [];
-
-    /** maximum thrust at standard atmosphere temp/pressure */
-    private _thrust_surface: number = 0;
-    /** maximum thrust in a vacuum */
-    private _thrust_vacuum: number = 0;
 
     /** empty mass of structural and propulsive components (everything except
      * propellant and payload) */
@@ -288,25 +236,7 @@ class Spacecraft extends GraphicsElement {
         return this._components.splice(ind, 1)[0];
     }
 
-    /** get the max thrust at standard temp & pressure */
-    get thrust_surface(): number {
-        return this._thrust_surface;
-    }
-    /** set the max thrust at standard temp & pressure */
-    set thrust_surface(value: number) {
-        this._thrust_surface = value;
-    }
-
-    /** get the max thrust in vacuum */
-    get thrust_vacuum(): number {
-        return this._thrust_vacuum;
-    }
-    /** get the max thrust in vacuum */
-    set thrust_vacuum(value: number) {
-        this._thrust_vacuum = value;
-    }
-
-    /** get the total mass as the sum of empty, propellant and payload masses */
+    /** get the sum of instantaneous mass of all components */
     get mass(): number {
 
         if(this._mass_total < 0) {
@@ -329,7 +259,7 @@ class Spacecraft extends GraphicsElement {
         return this._mass_total;
     }
 
-    /** get the empty mass (total less propellant and payload) */
+    /** get the sum of empty masses of all components */
     get emptyMass(): number {
 
         if(this._mass_empty < 0) {
@@ -339,14 +269,8 @@ class Spacecraft extends GraphicsElement {
 
         return this._mass_empty;
     }
-    /** set the empty mass (total less propellant and payload) */
-    set emptyMass(empty: number) {
-        //  set the empty mass and invalidate the total mass
-        this._mass_empty = empty;
-        this._mass_total = -1;
-    }
 
-    /** get the propellant mass */
+    /** get the sum of instantaneous propellant mass */
     get propellantMass(): number {
 
         if(this._mass_propellant < 0) {
@@ -356,14 +280,8 @@ class Spacecraft extends GraphicsElement {
 
         return this._mass_propellant;
     }
-    /** set the propellant mass */
-    set propellantMass(propellant: number) {
-        //  set the empty mass and invalidate the total mass
-        this._mass_propellant = propellant;
-        this._mass_total = -1;
-    }
 
-    /** get the payload mass */
+    /** get the sum of payload mass */
     get payloadMass(): number {
 
         if(this._mass_payload < 0) {
@@ -372,380 +290,6 @@ class Spacecraft extends GraphicsElement {
         }
 
         return this._mass_payload;
-    }
-    /** set the payload mass */
-    set payloadMass(payload: number) {
-        //  set the payload mass and invalidate the total mass
-        this._mass_payload = payload;
-        this._mass_total = -1;
-    }
-}
-
-
-abstract class SpacecraftComponent extends GraphicsElement {
-
-    /** total mass of the component */
-    protected _mass: number = 0;
-
-    /** location of component's center of mass wrt its own reference frame */
-    protected _com: Vector = new Vector;
-
-    /** the position of the component wrt the spacecraft's reference frame -
-     * given in terms of a designated vertex determined by shape (subclass) */
-    protected _pos: Vector = new Vector;
-
-    /** the velocity of the component wrt the spacecraft's net velocity */
-    protected _vel: Vector = new Vector;
-
-    /** get this component's mass */
-    get mass(): number {
-        return this._mass;
-    }
-
-    /** get the component's position vector wrt the spacecraft's reference
-     * frame */
-    get pos(): Vector {
-        return Vector.copy(this._pos);
-    }
-
-    /** get the component's position vector wrt the spacecraft's reference
-     * frame */
-    set pos(p: Vector) {
-        this._pos = p;
-    }
-
-    /** get the component's velocity vector wrt the spacecraft's velocity
-     * vector
-     *
-     * revisit - make sure the physics work out with this definition
-     */
-    get vel(): Vector {
-        return Vector.copy(this._vel);
-    }
-
-    /** get the component's angular velocity wrt that of the spacecraft
-     *
-     * revisit - implement (probably need to do so for the spacecraft first (?))
-     * revisit - make sure the physics work out with this definition
-     */
-    get angularVel(): Vector {
-        return new Vector();
-    }
-
-    /** get linear momentum of this individual component
-     *
-     * revisit - contingent upon validity of velocity vector definition
-     */
-    get momentum(): Vector {
-        return Vector.copy(this.vel).scale(this.mass);
-    }
-
-    /** get angular momentum of this individual component
-     *
-     * revisit - implement (probably need to do so for the spacecraft first (?))
-     * revisit - contingent upon validity of angular velocity vector
-     */
-    get angularMomentum(): Vector {
-        return new Vector();
-    }
-
-    /** get an array of geometric vertices as vectors */
-    abstract get vectorArray(): Vector[];
-
-    /** get a vertex array and corresponding element index array */
-    abstract get elements(): DataIndex;
-}
-
-
-/** interface organizing vertices based on how they're used in calculations */
-interface CylinderVerts {
-    btm: {
-        cntr: Vector,
-        prmtr: Vector[]
-    },
-    top: {
-        cntr: Vector,
-        prmtr: Vector[]
-    }
-}
-
-
-/** a cylinder is defined by a height and two separate radii - the first for the
- * bottom surface and the second for the top. the second is optional and is
- * equal to the first by default.
- *
- * cylinders define their own "local" reference frames such that the center
- * of the "bottom" face coincides with the origin, and their length extends in
- * the positive z (vertical) direction.
- */
-class Cylinder extends SpacecraftComponent {
-
-    /** length in the (local) z direction */
-    private _dz: number;
-
-    /** radius of the bottom surface */
-    private _r0: number;
-
-    /** radius of the top surface */
-    private _r1: number;
-
-    /** vertices forming the shape of this cylinder instance */
-    private _verts: Vector[];
-
-    /** number of edges used to represent a circular perimeter */
-    static readonly edgeCount: number = 12;
-
-    /** coordinates of all vertices for a cylinder with dz = r0 = r1 = 1;
-     * vertices for an arbitrary instance can be found by scaling, translating,
-     * and rotating these as appropriate
-     *
-     * note the order of vertices - bottom center, top center, bottom
-     * perimeter, top perimeter
-     */
-    static readonly unitVerts: CylinderVerts = {
-        btm: {
-            cntr: new Vector(0, 0, 0),
-            //  create an empty array of the required number of vertices and map
-            //  to angles by dividing index / edgeCount
-            prmtr: (new Array(Cylinder.edgeCount)).fill(0).map(
-                //  underscore prefix tells TS to ignore unused parameter
-                (_el, ind) => {
-                    return [
-                        Math.cos(ind * TWO_PI / Cylinder.edgeCount),
-                        Math.sin(ind * TWO_PI / Cylinder.edgeCount),
-                        0   //  bottom surface
-                    ];
-                }
-            ).map(vert => {
-                return new Vector(vert[0], vert[1], vert[2])
-            })
-        },
-        top: {
-            //  create an empty array of the required number of vertices and map
-            //  to angles by dividing index / edgeCount
-            cntr: new Vector(0, 0, 1),
-            prmtr: (new Array(Cylinder.edgeCount)).fill(0).map(
-                //  underscore prefix tells TS to ignore unused parameter
-                (_el, ind) => {
-                    return [
-                        Math.cos(ind * TWO_PI / Cylinder.edgeCount),
-                        Math.sin(ind * TWO_PI / Cylinder.edgeCount),
-                        1   //  top surface
-                    ];
-                }
-            ).map(vert => {
-                return new Vector(vert[0], vert[1], vert[2])
-            })
-        }
-    };
-
-    /** construct a cylinder with given height, primary radius and optional
-     * secondary radius (equal to the primary radius by default) */
-    constructor(dz: number, r0: number, r1: number = r0) {
-        super();
-        this._dz = dz;
-        this._r0 = r0;
-        this._r1 = r1;
-        this._verts = Cylinder.getVectors(dz, r0, r1);
-    }
-
-    /**
-     * get an array of *distinct* vertices for a cylinder of given height,
-     * primary radius, and secondary radius
-     *
-     * center of bottom face will be positioned at (x, y, z) = (0, 0, 0) local
-     * coordinates
-     *
-     * returned array will contain 2(*edgeCount+1) Vector instances
-     *
-     * many of these vertices will need to be duplicated before passing to WebGL
-     * (vertices will be assigned normals based on which face they belong to, so
-     * non-coplanar faces cannot share a vertex)
-     *
-     * vertices are grouped into bottom & top surfaces, starting with the bottom
-     * perimeter followed by the bottom center, then the same for the top.
-     * splitting the returned array in half will yield each surface
-     * respectively, with center nodes at the beginning of each
-     *
-     * assuming Cylinder.edgeCount = 12, the vertex Vectors will be ordered as
-     * illustrated in the following diagram. this diagram includes connections
-     * between nodes indicative of how they might grouped into elements. these
-     * groupings are accurate *at time of writing* but should not be relied on
-     * as they are determined in elements(). not shown in this diagram are nodes
-     * 12 and 25, the bottom & top centers, respectively
-     *
-     *      13--14--15--16--17--18--19--20--21--22--23--24
-     *      :\  :\  :\  :\  :\  :\  :\  :\  :\  :\  :\  :\
-     *   .. : \ : \ : \ : \ : \ : \ : \ : \ : \ : \ : \ : \..
-     *     \:  \:  \:  \:  \:  \:  \:  \:  \:  \:  \:  \:
-     *      0---1---2---3---4---5---6---7---8---9---10--11
-     */
-    static getVectors(dz: number, r0: number, r1: number): Vector[] {
-        return [
-            ...Cylinder.unitVerts.btm.prmtr.map(vert => vert.scale(r0)),
-            Cylinder.unitVerts.btm.cntr.copy(),
-            ...Cylinder.unitVerts.top.prmtr.map(vert => vert.scale([r1, r1, dz])),
-            Cylinder.unitVerts.top.cntr.scale(dz)
-        ];
-    }
-
-    /** get the height/length of this cylinder */
-    get dz(): number {
-        return this._dz;
-    }
-
-    /** get the primary radius of this cylinder */
-    get r0(): number {
-        return this._r0;
-    }
-
-    /** get the secondary radius of this cylinder */
-    get r1(): number {
-        return this._r1;
-    }
-
-    /** get an array of vertices forming the shape of this cylinder
-     *
-     * vertices are ordered as returned from Cylinder.getVectors(), i.e.
-     * bottom perimeter, bottom center, top perimeter, top center
-     */
-    get vectorArray(): Vector[] {
-        return this._verts.map(v => v.add(this.pos));
-    }
-
-    /** get an array of all vertices (including duplicates as necessary) and
-     * corresponding index array for this cylinder
-     *
-     * this method aims to minimize the number of copies made:
-     *   1. only as many copies are made as *extra* instances are needed -
-     *      original instances are re-used in the new arrays
-     *   2. vertices are *not* duplicated where shared by coplanar faces, so
-     *      none of the top or bottom center vertices are duplicated (all
-     *      elements that share any of those vertices are coplanar)
-     *
-     * in total the returned object will consist of:
-     *    - (2+4+2)*edgeCount+2 vertices (three 32-bit floats each)
-     *    - (2+4+2)*edgeCount+2 colors (four 32-bit floats each)
-     *    - (2+4+2)*edgeCount+2 normals (three 32-bit floats each)
-     *    - (1+2+1)*edgeCount element index arrays (three 16-bit u_ints each)
-     */
-    get elements(): DataIndex {
-
-        //  get a list of vertices
-        let vertices: Vector[] = this.vectorArray;
-
-        /*
-            make a copy of each vertex for every non-coplanar face which shares
-            that vertex
-
-            record triplets of indices that group vertices into (triangular)
-            elements
-         */
-
-        //  split vector array into separate top & bottom surface arrays
-        let topVerts: Vector[] = vertices.splice(vertices.length / 2);
-        let btmVerts: Vector[] = vertices;
-
-        //  create a separate array for copies of vertices for "side" surfaces
-        let sideVerts: Vector[] = [];
-
-        //  create separate arrays for element indices for top, bottom, and side
-        //  surfaces
-        let btmInd: [number, number, number][] = [];
-        let sideInd: [number, number, number][] = [];
-        let topInd: [number, number, number][] = [];
-
-        //  loop around the perimeter
-        //  for each edge of the top/bottom surface disks (i.e. face of the side
-        //  surface), add copies of all four vertices to the sideVerts array in
-        //  alternating bottom/top order
-        //  make sure that vertex references wrap back around to the start of
-        //  of the vertices array in the final iteration
-        const bCntr: number = Cylinder.edgeCount;
-        const tCntr: number = 2 * Cylinder.edgeCount + 1;
-        const sOffset: number = tCntr + 1;
-        let i1: number;
-        let fourI: number;
-        for(let i = 0; i < Cylinder.edgeCount; i += 1) {
-
-            //  wrap the "next" index back to 0 on the final iteration
-            i1 = (i + 1) % Cylinder.edgeCount;
-
-            //  make copies for the side faces/elements
-            sideVerts.push(...Vector.copy(
-                [btmVerts[i], topVerts[i], btmVerts[i1], topVerts[i1]]
-            ));
-
-            //  populate element index arrays
-            //  reverse winding of the bottom surface elements
-            btmInd.push([bCntr, i, i1]);
-            topInd.push([tCntr, i1 + bCntr + 1, i + bCntr + 1]);
-
-            fourI = i * 4;
-            sideInd.push(
-                [fourI + sOffset, fourI + sOffset + 1, fourI + sOffset + 2],
-                [fourI + sOffset + 2, fourI + sOffset + 1, fourI + sOffset + 3]
-            );
-        }
-
-        //  concat the resulting arrays into a final vertex array
-        let finalVerts: Vector[] = btmVerts.concat(topVerts).concat(sideVerts);
-
-        //  since the 3-vector vertices array will be flattened, each triplet
-        //  will start at an offset that is 3 times its position in these
-        //  intermediate arrays
-        //  account for this before mapping to final (flattened) index array
-        let finalInds: number[] = btmInd.concat(topInd).concat(sideInd).flat();
-
-        //  generate colors in-house
-        let colors: number[][] = [];
-        for(let i = 0; i < Cylinder.edgeCount; ++i) {
-
-            let theta = (i / btmVerts.length) * PI;
-            let r: number = Math.sin(theta);
-            let g: number = Math.sin(theta + PI / 3);
-            let b: number = Math.sin(theta + 2 * PI / 3);
-            colors.push([r, g, b, 1.0]);
-        }
-
-        //  initialize finalColors with two copies of colors (btm & top
-        //  surfaces)
-        let finalColors: number[][] = colors.concat(colors.slice());
-
-        //  add colors for side vertices
-        let i2: number;
-        for(let i = 0; i < Cylinder.edgeCount; ++i) {
-
-            //  wrap the "next" index back to 0 on the final iteration
-            i1 = (i + 1) % Cylinder.edgeCount;
-            i2 = (i + 2) % Cylinder.edgeCount;
-
-            finalColors.push(
-                colors[i],
-                colors[i1],
-                colors[i1],
-                colors[i2]
-            );
-        }
-
-        //  REVISIT: FOR DEVELOPMENT THIS METHOD GROUPS VECTORS AND INDICES INTO
-        //      NESTED ARRAYS AND FLATTENS THE FINAL ARRAYS BEFORE RETURNING
-        //      THESE REDUNDANT STEPS SHOULD BE REMOVED AFTER SUFFICIENT TESTING
-        //      ALSO, ELIMINATE INTERMEDIATE ARRAYS AND COMPILE VERT & ELEMENT
-        //      ARRAYS INCREMENTALLY
-        return {
-            vertCount: finalVerts.length,
-            indCount: finalInds.length,
-            position: Float32Array.from(finalVerts.map(v => v.valueOf()).flat()),
-            color: Float32Array.from(finalColors.flat()),
-            normal: Float32Array.from([]),
-            index: Uint16Array.from(finalInds)
-        };
-    }
-
-    /** get an array of all vertices forming the shape of this cylinder */
-    thick(): Vector[] {
-        return this.vectorArray;
     }
 }
 

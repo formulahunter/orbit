@@ -192,20 +192,9 @@ let activePlanet: KeplerianElements = planets['earth'];
 let activeCraft: Spacecraft;
 
 
-/** sim run counter - for testing only */
-let counter: number = 0;
-
-
-/** the sim() function is the engine powering the game - it performs
- * calculations to update the physics model, which in turn drives scene
- * rendering and gui layout.
- *
- * the model is updated starting with global parameters and progressing to
- * smaller, more localized domains.
- *
- * the simulation is "paused" between sessions: planet/spacecraft positions are
- * update wrt epoch time, which is reflected in the 'gameTime' player data
- * property (loaded at init & updated with each sim run)
+/** the sim() function is the engine powering the game - it takes input from the
+ * gui and performs calculations to update the physics model, which in turn
+ * drives scene rendering and gui feedback.
  */
 function sim() {
 
@@ -233,48 +222,25 @@ function sim() {
     //   throttle != 0) not to mention if craft is grounded (i.e. before launch)
     activeCraft.orbit.M += activeCraft.orbit.n * dgt;
 
-    /*//  now account for additional forces as appropriate
+    /*
+    //  now account for additional forces as appropriate
     if(thrustApplied) {
 
     }
     if(atmosphericDrag) {
 
     }
-    //  include a JGM or similar geodetic model
-    getLocalGravity();
-    //  calculate the ratios of gravitational influence from nearby bodies
-    //  if these ratios are fixed, calculate in advance
-    if(proximalThirdBody) {
-        //  consider always accounting for the sun by default
-    }*/
-
-
+    //  etc...
+    */
 
     //  update time of last run
     lastRun = now;
 
     //  wash, rinse, repeat
     //  limit to a few runs for testing
-    if(counter < 15 && queueNextRun) {
-        //  if setTimeout() itself becomes the primary performance bottleneck
-        //  see the note on postMessage() in document comments for a possible
-        //  workaround
+    if(queueNextRun) {
         window.setTimeout(sim);
     }
-
-    //  print resulting time & positions to the console
-    // console.info(`
-    // AFTER SIM RUN ${counter}:
-    //     session time (since "time origin"): ${now}
-    //     dt since last run: ${dt}
-    //     change in game time: ${dgt}
-    //     new game time: ${gameTime}
-    //     active planet position (M): ${activePlanet.M}
-    //     active craft position (M): ${activeCraft.orbit.M}
-    // `);
-
-    //  increment the run counter
-    ++counter;
 }
 
 /** initialize the simulator
